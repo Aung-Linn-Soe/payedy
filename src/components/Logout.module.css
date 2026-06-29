@@ -1,16 +1,23 @@
 .btn {
-  background-color: #60a5fa;
-  margin-top: 8px;
-  margin-bottom: 8px;
-  color: white;
-  padding: 6px 10px;
+  background: transparent;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+  padding: 6px 12px;
   border-radius: 6px;
-  border: none;
   cursor: pointer;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: #FEF2F2;
+  color: #EF4444;
+  border-color: #FECACA;
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: default;
 }

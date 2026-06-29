@@ -1,407 +1,206 @@
 .course-detail-page {
-  padding: 20px;
-  font-family: "Segoe UI", sans-serif;
+  padding: 24px 20px;
+  max-width: 980px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  font-family: "Inter", "Noto Sans JP", system-ui, sans-serif;
 }
 
 .course-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
+  gap: 12px;
 }
 
 .search-input {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
+  padding: 9px 14px;
+  border: 1px solid #CBD5E1;
   border-radius: 8px;
-  width: 280px;
+  width: 260px;
+  font-size: 14px;
+  color: #0F172A;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-input:focus {
+  outline: none;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
 }
 
+/* ─── Table ─── */
 .students-table {
   width: 100%;
   border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.06);
 }
 
-.students-table th,
-.students-table td {
-  border: 1px solid #eee;
-  padding: 10px;
+.students-table th {
   text-align: left;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 9999px;
-  font-size: 13px;
+  padding: 11px 14px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  font-size: 11px;
   font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.status-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  font-size: 12px;
+.students-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #F1F5F9;
+  font-size: 14px;
+  color: #0F172A;
+  vertical-align: middle;
 }
 
-/* Completed */
-.status-badge.success {
-  background-color: #e6f4ea; /* pale green */
-  color: #2e7d32;
-}
-.status-badge.success .status-icon {
-  background-color: #c8e6c9;
-  color: #2e7d32;
-}
+.students-table tbody tr:last-child td { border-bottom: none; }
+.students-table tbody tr { transition: background 0.1s; }
+.students-table tbody tr:hover td { background: #F8FAFC; }
 
-/* class name variants used in JSX */
-.status-badge.badge-success {
-  background-color: #e6f4ea;
-  color: #2e7d32;
-}
-.status-badge.badge-success .status-icon {
-  background-color: #c8e6c9;
-  color: #2e7d32;
-}
-
-/* Partial payment */
-.status-badge.partial {
-  background-color: #fff8e1; /* pale amber */
-  color: #8a6d00;
-}
-.status-badge.partial .status-icon {
-  background-color: #ffe082;
-  color: #8a6d00;
-}
-
-.status-badge.badge-partial {
-  background-color: #fff8e1;
-  color: #8a6d00;
-}
-.status-badge.badge-partial .status-icon {
-  background-color: #ffe082;
-  color: #8a6d00;
-}
-
-/* Overdue */
-.status-badge.overdue {
-  background-color: #fdecea; /* pale red */
-  color: #d32f2f;
-}
-.status-badge.overdue .status-icon {
-  background-color: #ffcdd2;
-  color: #d32f2f;
-}
-
-.status-badge.badge-overdue {
-  background-color: #fdecea;
-  color: #d32f2f;
-}
-.status-badge.badge-overdue .status-icon {
-  background-color: #ffcdd2;
-  color: #d32f2f;
-}
-
-/* Unset / default */
-.status-badge.unset {
-  background-color: #f5f5f5;
-  color: #666666;
-}
-.status-badge.unset .status-icon {
-  background-color: #e0e0e0;
-  color: #666666;
-}
-
-.status-badge.badge-unset {
-  background-color: #f5f5f5;
-  color: #666666;
-}
-.status-badge.badge-unset .status-icon {
-  background-color: #e0e0e0;
-  color: #666666;
-}
-
-.view-btn {
-  background-color: #2196f3;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.view-btn:hover {
-  background-color: #1976d2;
-}
-
-/* Responsive: convert table to stacked cards on small screens */
-/* ---------------------------------------
-   📱 Mobile-first improved responsive design
----------------------------------------- */
-
-@media (max-width: 640px) {
-  .course-detail-page {
-    padding: 16px;
-  }
-
-  .course-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 14px;
-  }
-
-  .search-input {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    font-size: 15px;
-  }
-
-  /* ---------- Card Layout ---------- */
-
-  .students-table {
-    display: block;
-  }
-
-  .students-table thead {
-    display: none;
-  }
-
-  .students-table tbody,
-  .students-table tr {
-    display: block;
-    width: 100%;
-    margin-bottom: 16px;
-
-    /* カードデザイン */
-    border: 1px solid #e5e5e5;
-    border-radius: 14px;
-    padding: 14px 16px;
-    box-sizing: border-box;
-    background: #ffffff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-  }
-
-  .students-table td {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border: none;
-    font-size: 14px;
-  }
-
-  .students-table tr td::before {
-    content: attr(data-label);
-    font-weight: 700;
-    color: #333;
-    margin-right: 10px;
-    flex: 1 0 auto;
-    font-size: 14px;
-  }
-
-  /* ---------- Buttons ---------- */
-  .students-table td.actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    padding-top: 12px;
-  }
-
-  /* hide the separate email column on mobile (we show email inside name card) */
-  .students-table td[data-label="メール"] {
-    display: none;
-  }
-
-  .view-btn {
-    background-color: #2196f3;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 10px;
-    font-size: 14px;
-    cursor: pointer;
-  }
-
-  .view-btn:hover {
-    background-color: #1976d2;
-  }
-
-  /* ---------- Status Badges ---------- */
-  .status-badge {
-    font-size: 12px;
-    padding: 6px 10px;
-    border-radius: 50px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    margin-top: 4px;
-  }
-
-  .status-icon {
-    width: 18px;
-    height: 18px;
-    font-size: 11px;
-  }
-}
-
-/* Delete button style */
-.delete-btn {
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background: white;
-  color: #b91c1c;
-  padding: 6px 10px;
-  border-radius: 8px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
-  cursor: pointer;
-}
-.delete-btn:hover {
-  background: #fff6f6;
-}
-
-/* show email inside name block only on mobile */
-.student-email {
-  display: none;
-}
-
-/* card visuals: smoother shadow and more padding */
-.students-table tbody,
-.students-table tr {
-  transition: transform 160ms ease, box-shadow 160ms ease;
-}
-.students-table tbody:hover > tr,
-.students-table tr:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
-}
-
-@media (max-width: 640px) {
-  /* show the email in the name block on mobile */
-  .student-email {
-    display: block;
-    color: #666;
-    font-size: 13px;
-    margin-top: 6px;
-  }
-
-  /* slightly larger name text on mobile */
-  .student-name {
-    font-size: 16px;
-  }
-
-  /* style for status badge to look like a pill with subtle shadow */
-  .status-badge {
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: inset 0 -6px 18px rgba(0, 0, 0, 0.03);
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-
-  /* progress bar gradient */
-  .progress-bar {
-    background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 70%);
-  }
-
-  /* action button spacing and make delete button consistent */
-  .students-table td.actions .ml-2 {
-    margin-left: 0;
-  }
-  .students-table td.actions .delete-btn {
-    padding: 8px 10px;
-    font-size: 13px;
-  }
-}
-
-/* General styles for avatar / name block and progress bar (desktop & mobile) */
-.student-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
+/* ─── Student row ─── */
+.student-row { display: flex; gap: 10px; align-items: center; }
 
 .avatar {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6ee7b7 0%, #3b82f6 100%);
+  background: #2563EB;
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 
-.name-meta .student-name {
-  font-weight: 700;
-  font-size: 15px;
-}
+.student-name { font-weight: 600; font-size: 14px; }
+.student-sub { font-size: 12px; color: #64748B; margin-top: 1px; }
+.student-email { display: none; }
+.name-meta {}
 
-.name-meta .student-sub {
-  display: none; /* show on mobile only */
-}
-
+/* ─── Progress bar ─── */
 .progress-bar-container {
-  background: #e5e7eb;
-  height: 8px;
-  border-radius: 9999px;
+  background: #E2E8F0;
+  height: 6px;
+  border-radius: 999px;
   overflow: hidden;
+  min-width: 80px;
 }
 .progress-bar {
-  background: #3b82f6;
+  background: #2563EB;
   height: 100%;
   transition: width 400ms ease;
 }
 
-/* Mobile polish */
+/* ─── Status badge ─── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.status-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.status-badge.success, .status-badge.badge-success  { background: #ECFDF5; color: #065F46; }
+.status-badge.success .status-icon, .status-badge.badge-success .status-icon { background: #A7F3D0; color: #065F46; }
+
+.status-badge.partial, .status-badge.badge-partial  { background: #FFFBEB; color: #92400E; }
+.status-badge.partial .status-icon, .status-badge.badge-partial .status-icon { background: #FDE68A; color: #92400E; }
+
+.status-badge.overdue, .status-badge.badge-overdue  { background: #FEF2F2; color: #991B1B; }
+.status-badge.overdue .status-icon, .status-badge.badge-overdue .status-icon { background: #FECACA; color: #991B1B; }
+
+.status-badge.unset, .status-badge.badge-unset      { background: #F1F5F9; color: #475569; }
+.status-badge.unset .status-icon, .status-badge.badge-unset .status-icon { background: #CBD5E1; color: #475569; }
+
+/* ─── Buttons ─── */
+.view-btn {
+  background: #EFF6FF;
+  color: #2563EB;
+  border: 1px solid #BFDBFE;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.12s;
+  text-decoration: none;
+  display: inline-block;
+}
+.view-btn:hover { background: #DBEAFE; }
+
+.delete-btn {
+  background: #fff;
+  color: #EF4444;
+  border: 1px solid #FECACA;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.delete-btn:hover { background: #FEF2F2; }
+
+/* ─── Responsive: stacked cards ─── */
 @media (max-width: 640px) {
-  .avatar {
-    width: 56px;
-    height: 56px;
-    font-size: 18px;
-  }
+  .course-detail-page { padding: 16px 14px; }
+  .course-header { flex-direction: column; align-items: stretch; gap: 10px; }
+  .search-input { width: 100%; }
 
-  .name-meta .student-sub {
-    display: block;
-    color: #666;
-    font-size: 13px;
-    margin-top: 6px;
-  }
-
-  /* make progress bar larger and full width inside card */
-  .students-table td[data-label="状態"] .progress-bar-container {
-    width: 100% !important;
-    height: 12px;
-  }
-
-  .students-table td[data-label="状態"] .progress-bar {
-    height: 100%;
-  }
-
-  /* Emphasize name and email spacing in card */
-  .students-table td[data-label="メール"] {
-    padding-top: 6px;
-    padding-bottom: 6px;
-    color: #444;
-    font-size: 14px;
-  }
-
-  /* Make student id link more visible in card footer */
-  .students-table td[data-label="学生記番号"] a {
-    color: #3b82f6;
-    font-weight: 700;
-  }
-
-  /* Slightly larger card shadow and spacing */
-  .students-table tbody,
+  .students-table { display: block; border: none; box-shadow: none; }
+  .students-table thead { display: none; }
+  .students-table tbody, .students-table tr { display: block; width: 100%; }
   .students-table tr {
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.05);
   }
+  .students-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border: none;
+  }
+  .students-table tr td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #64748B;
+    font-size: 12px;
+    min-width: 70px;
+  }
+  .students-table td[data-label="メール"] { display: none; }
+  .students-table td.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 10px;
+  }
+  .student-email { display: block; font-size: 12px; color: #64748B; margin-top: 2px; }
+  .avatar { width: 44px; height: 44px; font-size: 16px; }
+  .progress-bar-container { width: 100%; }
 }

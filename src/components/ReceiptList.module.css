@@ -1,202 +1,115 @@
-/* CSS variables moved to globals.css :root to satisfy CSS Modules purity. */
-
-/* ======= Layout ======= */
+/* ─── Grid ─── */
 .container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.item {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.item:hover { box-shadow: 0 4px 12px rgba(15,23,42,0.1); border-color: #BFDBFE; }
+
+.thumb {
+  display: block !important;
+  width: 80px !important;
+  height: 80px !important;
+  object-fit: cover !important;
+  border-radius: 10px;
+  cursor: pointer;
+  margin: 0 !important;
+}
+
+.placeholder {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F1F5F9;
+  border-radius: 10px;
+}
+
+.placeholderText {
+  font-size: 11px;
+  color: #94A3B8;
+  text-align: center;
   padding: 4px;
 }
 
-/* ======= Item ======= */
-.item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
-}
+/* ─── Meta (unused but kept for compat) ─── */
+.meta { text-align: center; }
+.receiptMeta { font-size: 12px; color: #475569; }
+.receiptSub { font-size: 12px; color: #94A3B8; margin-top: 4px; }
 
-.item:hover {
-  transform: translateY(-3px);
-}
-
-/* ======= Thumbnail ======= */
-.thumb {
-  width: 90px;
-  height: 90px;
-  object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  cursor: pointer;
-  display: block;
-  box-shadow: var(--shadow);
-  background: white;
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
-  margin-right: 60px;
-}
-
-.thumb:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-}
-
-/* Responsive: tighter grid on small screens */
-@media (max-width: 480px) {
-  .container {
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 12px;
-  }
-  .thumb,
-  .placeholder {
-    width: 80px;
-    height: 80px;
-    margin-left: 50px;
-  
-  }
-}
-
-/* ======= Placeholder ======= */
-.placeholder {
-  width: 90px;
-  height: 90px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-light);
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 13px;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-/* ======= Meta ======= */
-.meta {
-  text-align: center;
-}
-
-.receiptMeta {
-  font-size: 12px;
-  color: #444;
-}
-
-.receiptSub {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 4px;
-}
-
-/* ======= Modal ======= */
+/* ─── Modal backdrop ─── */
 .modal {
   position: fixed;
   inset: 0;
+  background: rgba(15, 23, 42, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
-  z-index: 9999;
-  padding: 0;
-  animation: fadeIn 0.3s ease-out;
+  z-index: 100;
+  padding: 20px;
+  backdrop-filter: blur(3px);
 }
 
+/* ─── Modal content ─── */
 .modalContent {
   position: relative;
-  width: 100%;
-  height: 100%;
+  background: #fff;
+  border-radius: 14px;
+  padding: 48px 16px 16px;
+  box-shadow: 0 20px 60px rgba(15,23,42,0.25);
+  max-width: min(90vw, 640px);
+  max-height: 90vh;
+  overflow: auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.modalImage {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  border-radius: 0;
-  box-shadow: none;
-  background: transparent;
-  object-fit: contain;
-}
-
-/* ======= Close Button ======= */
 .closeBtn {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(255, 255, 255, 0.95);
-  border: none;
-  width: 44px;
-  height: 44px;
+  top: 10px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #475569;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  transition: background 0.2s ease, transform 0.2s ease;
-  color: #000;
-  z-index: 10000;
+  transition: background 0.12s, color 0.12s;
+  z-index: 1;
+}
+.closeBtn:hover { background: #FEE2E2; color: #DC2626; border-color: #FECACA; }
+
+.modalImage {
+  display: block;
+  max-width: 100% !important;
+  max-height: 75vh !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 8px;
+  object-fit: contain;
+  margin: 0 !important;
 }
 
-.closeBtn:hover {
-  background: #fff;
-  transform: scale(1.1);
-}
-
-.closeBtn:active {
-  transform: scale(0.95);
-}
-
-/* ======= Animations ======= */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    backdrop-filter: blur(0);
-  }
-  to {
-    opacity: 1;
-    backdrop-filter: blur(2px);
-  }
-}
-
-@keyframes popIn {
-  from {
-    transform: scale(0.9);
-    opacity: 0.7;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* ======= Mobile Responsive ======= */
-@media (max-width: 640px) {
-  .modal {
-    padding: 12px;
-  }
-
-  .modalContent {
-    max-width: 95%;
-    max-height: 95%;
-  }
-
-  .modalImage {
-    max-width: 100%;
-    max-height: 85vh;
-    object-fit: contain;
-  }
-
-  .closeBtn {
-    top: 12px;
-    right: 12px;
-    width: 36px;
-    height: 36px;
-    font-size: 24px;
-  }
+/* ─── Responsive ─── */
+@media (max-width: 480px) {
+  .thumb { width: 68px !important; height: 68px !important; }
+  .placeholder { width: 68px; height: 68px; }
 }
