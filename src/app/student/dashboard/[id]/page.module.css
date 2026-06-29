@@ -604,6 +604,69 @@
   margin-top: 16px;
 }
 
+/* ==== Overview wrap ==== */
+.overviewWrap { display: flex; flex-direction: column; gap: 16px; }
+
+/* ==== Profile header (overview) ==== */
+.profileHeader { display: flex; align-items: center; gap: 16px; }
+.avatarCircle {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  color: #fff; font-size: 22px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+}
+.profileHeaderInfo { display: flex; flex-direction: column; gap: 4px; }
+.profileHeaderName { font-size: 18px; font-weight: 700; color: #0F172A; }
+.profileHeaderMeta { font-size: 13px; color: #64748B; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dot { color: #CBD5E1; }
+
+/* ==== Section title ==== */
+.sectionTitle { font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 14px; }
+
+/* ==== Payment table tweaks ==== */
+.paymentTable thead th {
+  background: #F8FAFC; color: #64748B; font-size: 11px;
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 10px 12px; border-bottom: 1px solid #E2E8F0; text-align: left;
+}
+.dateCell { display: flex; flex-direction: column; gap: 2px; }
+.timeText { font-size: 11px; color: #94A3B8; }
+.amountCell { font-weight: 600; color: #0F172A; }
+.noImg { font-size: 12px; color: #94A3B8; }
+.emptyMsg { color: #94A3B8; font-size: 14px; text-align: center; padding: 24px 0; }
+
+/* ==== Discount panel ==== */
+.discountListBox { background: #F8FAFC; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px; }
+.discountItem { display: flex; justify-content: space-between; align-items: center; }
+.discountReason { font-size: 13px; color: #334155; }
+.discountAmt { font-size: 13px; font-weight: 600; color: #DC2626; }
+.discountForm { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.migrateBtn {
+  background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0;
+  padding: 7px 14px; border-radius: 7px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background 0.12s;
+}
+.migrateBtn:hover { background: #E2E8F0; }
+.migrateBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ==== Profile page tab ==== */
+.profilePageWrap { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 0; }
+.profilePageAvatar {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  color: #fff; font-size: 32px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.25); overflow: hidden;
+}
+.profilePageImg { width: 100%; height: 100%; object-fit: cover; }
+.profilePageName { font-size: 20px; font-weight: 700; color: #0F172A; }
+.profileGrid { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 0; margin-top: 8px; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
+.profileGridItem { display: flex; padding: 13px 16px; border-bottom: 1px solid #F1F5F9; background: #fff; }
+.profileGridItem:last-child { border-bottom: none; }
+.profileGridLabel { width: 120px; flex-shrink: 0; font-size: 12px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; }
+.profileGridValue { font-size: 14px; color: #0F172A; font-weight: 500; word-break: break-all; }
+
 /* ==== Helpers ==== */
 .discount-form {
   display: flex;

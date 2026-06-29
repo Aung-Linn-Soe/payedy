@@ -169,38 +169,65 @@ export default function PaymentSchedule({ student, courseInfo, payments = [] }) 
     }
   };
 
+  const toJaMonth = (monthStr) => {
+    if (!monthStr) return monthStr;
+    const [y, m] = monthStr.split("-");
+    return `${y}年 ${Number(m)}月`;
+  };
+
+  const toJaDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    return isNaN(d) ? dateStr : d.toLocaleDateString("ja-JP");
+  };
+
+  const getDisplayAmount = (s) => {
+    const mm = String(s.month || "").slice(5, 7);
+    const tmpl = courseInfo?.monthlyTemplate || {};
+    return tmpl[mm] != null ? Number(tmpl[mm]) : Number(s.dueAmount) || 0;
+  };
+
+  const paidCount = schedules.filter((s) => s.status === "支払い済み").length;
+  const totalCount = schedules.length;
+
   return (
     <section>
-      {loading && <div className={styles.loading}>スケジュールを作成しています…</div>}
-      <div className={styles.yearLabel}>
-        <strong>スケジュール年: {determineScheduleYear() ?? "未設定"}</strong>
+      {loading && <div className={styles.loading}>スケジュールを読み込んでいます…</div>}
+
+      <div className={styles.scheduleHeader}>
+        <div className={styles.yearLabel}>{determineScheduleYear() ?? "-"}年度 支払いスケジュール</div>
+        <div className={styles.scheduleProgress}>{paidCount} / {totalCount} ヶ月完了</div>
       </div>
+
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
-            <tr><th>支払い月</th><th>期限</th><th>月額</th><th>状態</th><th>レシート</th></tr>
+            <tr>
+              <th>支払い月</th>
+              <th>期限</th>
+              <th className={styles.thRight}>月額</th>
+              <th className={styles.thCenter}>状態</th>
+              <th>領収書</th>
+            </tr>
           </thead>
           <tbody>
             {schedules.map((s) => (
               <tr key={s.month} className={styles.rowBorder}>
-                <td className={styles.td}>{s.month}</td>
-                <td className={styles.td}>{s.dueDate}</td>
-                <td>
+                <td className={styles.td}>{toJaMonth(s.month)}</td>
+                <td className={styles.td}>{toJaDate(s.dueDate)}</td>
+                <td className={styles.tdRight}>
                   {canEditAmounts ? (
-                    <input type="number" defaultValue={(() => {
-                      const mm = String(s.month || "").slice(5, 7);
-                      const tmpl = courseInfo?.monthlyTemplate || {};
-                      return tmpl[mm] != null ? Number(tmpl[mm]) : s.dueAmount;
-                    })()} onBlur={(e) => onDueChange(s.month, e.target.value)} className={styles.inputAmount} />
+                    <input
+                      type="number"
+                      defaultValue={getDisplayAmount(s)}
+                      onBlur={(e) => onDueChange(s.month, e.target.value)}
+                      className={styles.inputAmount}
+                    />
                   ) : (
-                    <>¥{(() => {
-                      const mm = String(s.month || "").slice(5, 7);
-                      const tmpl = courseInfo?.monthlyTemplate || {};
-                      return tmpl[mm] != null ? Number(tmpl[mm]).toLocaleString() : Number(s.dueAmount).toLocaleString();
-                    })()}</>
+                    <span className={styles.amountText}>¥{getDisplayAmount(s).toLocaleString()}</span>
                   )}
                 </td>
-                <td>
+                <td className={styles.tdCenter}>
                   <span className={`${styles.statusText} ${s.status === "支払い済み" ? styles.paid : s.status === "一部支払い" ? styles.partial : styles.unpaid}`}>
                     {s.status}
                   </span>
