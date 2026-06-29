@@ -19,6 +19,7 @@ export default function StudentDashboardIdPage() {
   const [computedTuition, setComputedTuition] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [amount, setAmount] = useState("");
   const [receiptMonth, setReceiptMonth] = useState("");
@@ -80,12 +81,15 @@ export default function StudentDashboardIdPage() {
     if (!student?.courseId) { setCourseInfo(null); setComputedTuition(null); return; }
     (async () => {
       try {
-        const gradeEN = student.grade || student.gradeEN || null;
+        const gradeEN = student.gradeEN || null;
         const gradeJP = student.gradeJP || null;
+        // courseKey ("web") is used for filtering, courseId may be the full code ("web-3rd-year")
+        const ck = student.courseKey || student.courseId;
         const queries = [
-          gradeEN ? `/api/courses?courseKey=${encodeURIComponent(student.courseId)}&year=${encodeURIComponent(gradeEN)}` : null,
-          gradeJP ? `/api/courses?courseKey=${encodeURIComponent(student.courseId)}&year=${encodeURIComponent(gradeJP)}` : null,
-          `/api/courses?courseKey=${encodeURIComponent(student.courseId)}`,
+          `/api/courses?code=${encodeURIComponent(student.courseId)}`,
+          gradeEN ? `/api/courses?courseKey=${encodeURIComponent(ck)}&year=${encodeURIComponent(gradeEN)}` : null,
+          gradeJP ? `/api/courses?courseKey=${encodeURIComponent(ck)}&year=${encodeURIComponent(gradeJP)}` : null,
+          `/api/courses?courseKey=${encodeURIComponent(ck)}`,
         ].filter(Boolean);
         for (const url of queries) {
           const res = await fetch(url);
@@ -151,7 +155,7 @@ export default function StudentDashboardIdPage() {
       });
       if (!res.ok) throw new Error("upload failed");
       alert("支払い情報を保存しました！");
-      setFile(null); setAmount("");
+      setFile(null); setAmount(""); setPreviewUrl(null);
       fetchPayments();
     } catch (err) { alert("アップロードに失敗しました。"); }
     finally { setUploading(false); }
@@ -224,7 +228,7 @@ export default function StudentDashboardIdPage() {
       {activeTab === "overview" && (
         <section className={styles.card}>
           <h1 className={styles.title}>支払い状況 — {student?.studentId || routeId}</h1>
-          <div className={styles.infoBox}><div>コース: {courseInfo?.name ?? student?.courseId ?? "未設定"}</div></div>
+          <div className={styles.infoBox}><div>コース: {courseInfo?.name ?? student?.courseKey ?? "未設定"}</div></div>
           <div className={styles["progress-row"]}><span className={styles.label}>支払い進捗</span><span className={styles.percent}>{progress.toFixed(1)}%</span></div>
           <div className={styles["progress-wrap"]}><div className={styles["progress-bar"]} style={{ width: `${progress}%` }} /></div>
           <div className={styles.stats}>
@@ -266,7 +270,7 @@ export default function StudentDashboardIdPage() {
                       <td>
                         <div className={styles.paymentAction}>
                           {p.receiptBase64 ? <img src={p.receiptBase64} alt="receipt" className={receiptStyles.thumb} onClick={() => setLightboxSrc(p.receiptBase64)} /> : <div className={receiptStyles.placeholder}><span className={receiptStyles.placeholderText}>No image</span></div>}
-                          {isTeacher && <button className={styles.secondaryBtn} onClick={() => handleDeletePayment(p.paymentId || p.id)}>削除</button>}
+                          <button className={styles.deleteBtn} onClick={() => handleDeletePayment(p.paymentId || p.id)}>削除</button>
                         </div>
                       </td>
                     </tr>
@@ -282,13 +286,67 @@ export default function StudentDashboardIdPage() {
       {activeTab === "history" && <section className={styles.card}><PaymentSchedule student={student} courseInfo={courseInfo} payments={payments} /></section>}
 
       {activeTab === "upload" && (
-        <section className={styles.card}>
-          <h2>レシートをアップロード</h2>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: 12 }}>
-            <label>金額:<input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="例: 86000" style={{ marginLeft: 8 }} /></label>
-            <label>対象月:<input type="month" value={receiptMonth} onChange={(e) => setReceiptMonth(e.target.value)} style={{ marginLeft: 8 }} /></label>
-            <label>ファイル:<input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0])} style={{ marginLeft: 8 }} /></label>
-            <button onClick={() => handleReceiptUpload(receiptMonth || undefined)} disabled={uploading}>{uploading ? "アップロード中..." : "OK"}</button>
+        <section className={styles.uploadSection}>
+          <h2 className={styles.uploadTitle}>領収書アップロード</h2>
+          <p className={styles.uploadSubtitle}>支払いの証明として領収書画像を提出してください</p>
+          <div className={styles.uploadForm}>
+            <div className={styles.uploadField}>
+              <span className={styles.uploadLabel}>対象月</span>
+              <input
+                type="month"
+                className={styles.uploadInput}
+                value={receiptMonth}
+                onChange={(e) => setReceiptMonth(e.target.value)}
+              />
+            </div>
+            <div className={styles.uploadField}>
+              <span className={styles.uploadLabel}>支払い金額（円）</span>
+              <input
+                type="number"
+                className={styles.uploadInput}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="例: 86000"
+                min="0"
+              />
+            </div>
+            <div className={styles.uploadField}>
+              <span className={styles.uploadLabel}>領収書画像</span>
+              <label className={styles.uploadFileLabel}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    setFile(f);
+                    setPreviewUrl(f ? URL.createObjectURL(f) : null);
+                  }}
+                />
+                {previewUrl ? (
+                  <div className={styles.uploadPreview}>
+                    <img src={previewUrl} alt="preview" className={styles.uploadPreviewImg} />
+                    <span className={styles.uploadPreviewName}>{file?.name}</span>
+                    <span className={styles.uploadPreviewChange}>クリックして変更</span>
+                  </div>
+                ) : (
+                  <div className={styles.uploadDropArea}>
+                    <span className={styles.uploadDropIcon}>📎</span>
+                    <span className={styles.uploadDropText}>クリックしてファイルを選択</span>
+                    <span className={styles.uploadDropHint}>JPG・PNG・GIF 対応</span>
+                  </div>
+                )}
+              </label>
+            </div>
+            <div className={styles.uploadBtnWrap}>
+              <button
+                className={styles.uploadBtn}
+                onClick={() => handleReceiptUpload(receiptMonth || undefined)}
+                disabled={uploading || !file || !amount}
+              >
+                {uploading ? "アップロード中..." : "送信する"}
+              </button>
+            </div>
           </div>
         </section>
       )}
