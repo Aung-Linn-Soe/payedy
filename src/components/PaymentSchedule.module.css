@@ -1,17 +1,21 @@
-/* CSS variables moved to globals.css :root to satisfy CSS Modules purity. */
-
 .yearLabel {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
   font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .loading {
   margin-bottom: 8px;
-  color: var(--muted);
+  font-size: 13px;
+  color: #64748B;
 }
 
 .tableWrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .table {
@@ -20,182 +24,105 @@
   background: #fff;
   border-radius: 10px;
   overflow: hidden;
-}
-
-/* Prevent subpixel jitter / overflow on mobile: use border-box and fixed layout */
-.table {
   box-sizing: border-box;
   table-layout: fixed;
 }
 
-.table td,
-.table th {
+.table td, .table th {
   box-sizing: border-box;
-  min-width: 0; /* allow cells to shrink on small screens */
+  min-width: 0;
   word-break: break-word;
 }
 
 .table thead th {
   text-align: left;
-  padding: 14px 16px;
+  padding: 10px 14px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  font-size: 11px;
   font-weight: 600;
-  color: #111827;
-  border-bottom: 1px solid var(--border);
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.thLeft,
-.thRight,
-.thCenter,
-.td,
-.tdRight,
-.tdCenter {
-  padding: 12px 16px;
+.thLeft, .thRight, .thCenter, .td, .tdRight, .tdCenter {
+  padding: 12px 14px;
   vertical-align: middle;
 }
 
-.tdRight,
-.thRight {
-  text-align: right;
-}
+.tdRight, .thRight { text-align: right; }
+.tdCenter, .thCenter { text-align: center; }
 
-.tdCenter,
-.thCenter {
-  text-align: center;
-}
+.rowBorder { border-bottom: 1px solid #F1F5F9; }
+.table tbody tr:last-child .rowBorder { border-bottom: none; }
+.table tbody tr:hover td { background: #F8FAFC; }
 
-.rowBorder {
-  border-bottom: 1px solid var(--border);
-}
-
+/* ─── Input ─── */
 .inputAmount {
-  width: 120px;
-  /* text-align: center; */
-  padding: 6px 8px;
+  width: 110px;
+  padding: 6px 10px;
   border-radius: 6px;
-  border: 1px solid var(--input-border);
+  border: 1px solid #CBD5E1;
+  font-size: 13px;
+  color: #0F172A;
+  text-align: right;
+  transition: border-color 0.15s;
 }
+.inputAmount:focus { outline: none; border-color: #2563EB; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
 
 .hiddenAmount {
   display: inline-block;
   padding: 6px 8px;
-  background: #f5f5f5;
+  background: #F1F5F9;
   border-radius: 6px;
-  color: var(--muted);
+  color: #94A3B8;
+  font-size: 13px;
 }
 
 .amountText {
   display: inline-block;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 500;
+  padding: 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0F172A;
 }
 
+/* ─── Receipt cell ─── */
 .receiptCell {
-  padding: var(--pad);
-  margin-right: 16px;
+  padding: 8px;
 }
 .receiptCell img {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   object-fit: cover;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  border-radius: 7px;
+  border: 1px solid #E2E8F0;
 }
+
+/* ─── Status badges ─── */
 .statusText {
-  font-weight: 500;
   display: inline-block;
-  padding: 8px 12px;
+  padding: 4px 12px;
   border-radius: 999px;
-  color: #ffffff;
-  font-size: 13px;
-  background: linear-gradient(
-    90deg,
-    #f97316,
-    #fb923c
-  ); /* default: unpaid (orange) */
-  min-width: 80px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 72px;
   text-align: center;
+  background: #FEF3C7;
+  color: #92400E;
 }
 
-/* status variants */
-.paid {
-  background: linear-gradient(90deg, #10b981, #059669); /* green */
-  color: #fff;
-  font-size: 13px;
-}
+.paid    { background: #ECFDF5; color: #065F46; }
+.partial { background: #FFFBEB; color: #92400E; }
+.unpaid  { background: #FEF3C7; color: #92400E; }
 
-.partial {
-  background: linear-gradient(90deg, #f59e0b, #f97316); /* amber */
-  color: #fff;
-}
-
-.unpaid {
-  background: linear-gradient(90deg, #f97316, #fb923c); /* orange */
-  color: #fff;
-}
-
-/* ------------------------------
-   Responsive tweaks
-   ------------------------------ */
+/* ─── Responsive ─── */
 @media (max-width: 640px) {
-  /* smooth native scrolling on iOS */
-  .tableWrap {
-    -webkit-overflow-scrolling: touch;
-    overflow-y: visible;
-  }
-
-  /* make grid children allowed to shrink to avoid horizontal overflow */
-  .table tbody tr,
-  .table tbody tr > td {
-    min-width: 0;
-    box-sizing: border-box;
-  }
-
-  /* promote to its own layer to reduce repaint jitter when scrolling */
-  .table tbody tr {
-    will-change: transform;
-    transform: translateZ(0);
-  }
-
-  .table thead th {
-    padding: 10px 12px;
-    font-size: 8px;
-  }
-  .td,
-  .tdRight,
-  .tdCenter,
-  .thLeft,
-  .thRight,
-  .thCenter {
-    padding: 10px 12px;
-    font-size: 14px;
-  }
-  .inputAmount {
-    width: 96px;
-    padding: 6px 6px;
-  }
-  .receiptCell img {
-    width: 48px;
-    height: 48px;
-  }
-  .id {
-    font-size: 4px;
-    margin: 60px;
-  }
-  .statusText {
-    min-width: 75px;
-    text-align: center;
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-  .paid,
-  .partial,
-  .unpaid {
-    min-width: 60px;
-    text-align: center;
-    margin-right: 19px;
-  
-  }
+  .table thead th { padding: 8px 10px; font-size: 10px; }
+  .td, .tdRight, .tdCenter, .thLeft, .thRight, .thCenter { padding: 10px; font-size: 13px; }
+  .inputAmount { width: 80px; padding: 5px 7px; }
+  .receiptCell img { width: 40px; height: 40px; }
+  .statusText { min-width: 60px; padding: 4px 8px; font-size: 11px; }
+  .paid, .partial, .unpaid { min-width: 60px; }
 }

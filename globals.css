@@ -1,104 +1,136 @@
-/* @tailwind base;
-@tailwind components;
-@tailwind utilities; */
-
-/* リセット用（任意） */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
-/* ------------------------------
-   Utility / component styles
-   These classes are provided so inline styles in JSX
-   can be replaced with CSS classes (avoid writing CSS in code).
-   Add more as needed and prefer module CSS for page-scoped rules.
-   ------------------------------ */
 
-/* spacing utilities (small increments used across components) */
-.mt-6 {
-  margin-top: 6px;
-}
-.mt-8 {
-  margin-top: 8px;
-}
-.mt-12 {
-  margin-top: 12px;
-}
-.mt-18 {
-  margin-top: 18px;
-}
-.ml-6 {
-  margin-left: 6px;
-}
-.ml-8 {
-  margin-left: 8px;
-}
+/* ─── Design Tokens ─── */
+:root {
+  --primary:        #2563EB;
+  --primary-dark:   #1D4ED8;
+  --primary-light:  #EFF6FF;
+  --primary-ring:   rgba(37,99,235,0.18);
 
-/* text utilities */
-.text-sm-muted {
-  font-size: 12px;
-  color: #666666;
-}
-.text-sm-dark {
-  font-size: 12px;
-  color: #333333;
-}
-.text-muted-999 {
-  color: #999999;
-}
-.error-text {
-  color: red;
-  margin-top: 8px;
-}
+  --success:        #10B981;
+  --success-light:  #ECFDF5;
+  --warning:        #F59E0B;
+  --warning-light:  #FFFBEB;
+  --error:          #EF4444;
+  --error-light:    #FEF2F2;
 
-/* layout helpers */
-.max-width-600 {
-  max-width: 600px;
-}
-.max-w-50pc {
-  max-width: 50%;
-  height: auto;
-}
-.img-responsive {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-.center-text {
-  text-align: center;
+  --bg-page:   #F8FAFC;
+  --bg-card:   #FFFFFF;
+  --bg-subtle: #F1F5F9;
+  --bg-hover:  #F8FAFC;
+
+  --text:         #0F172A;
+  --text-sub:     #475569;
+  --text-muted:   #94A3B8;
+
+  --border:       #E2E8F0;
+  --border-strong:#CBD5E1;
+
+  --radius-sm: 6px;
+  --radius:    8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(15,23,42,0.05);
+  --shadow:    0 1px 3px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04);
+  --shadow-md: 0 4px 6px rgba(15,23,42,0.07), 0 2px 4px rgba(15,23,42,0.05);
+  --shadow-lg: 0 10px 15px rgba(15,23,42,0.08), 0 4px 6px rgba(15,23,42,0.04);
+
+  /* Legacy compat — keep these so older modules still work */
+  --gap:         8px;
+  --pad:         8px;
+  --muted:       #64748B;
+  --input-border:#CBD5E1;
+  --bg-light:    #F8FAFC;
+  --shadow:      0 4px 12px rgba(0,0,0,0.06);
 }
 
-/* image helpers used for receipts / previews */
+/* ─── Base ─── */
+html, body {
+  overscroll-behavior-y: contain;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: "Inter", "Noto Sans JP", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg-page);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.75rem; }
+h2 { font-size: 1.25rem; font-weight: 700; }
+p  { margin-bottom: 1rem; }
+
+@media (max-width: 640px) { h1 { font-size: 1.4rem; } }
+
+/* ─── App shell ─── */
+.appRoot {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+/* ─── Spacing utilities ─── */
+.mt-6  { margin-top: 6px; }
+.mt-8  { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-18 { margin-top: 18px; }
+.ml-6  { margin-left: 6px; }
+.ml-8  { margin-left: 8px; }
+
+/* ─── Text utilities ─── */
+.text-sm-muted { font-size: 12px; color: var(--text-muted); }
+.text-sm-dark  { font-size: 12px; color: var(--text); }
+.text-muted-999{ color: var(--text-muted); }
+.error-text    { color: var(--error); margin-top: 8px; }
+.hint-small    { font-size: 13px; color: var(--text-sub); }
+.center-text   { text-align: center; }
+
+/* ─── Layout helpers ─── */
+.max-width-600     { max-width: 600px; }
+.max-w-50pc        { max-width: 50%; height: auto; }
+.img-responsive    { max-width: 100%; height: auto; display: block; }
+.scroll-x          { overflow-x: auto; }
+.container-responsive {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: 16px;
+  max-width: 1100px;
+}
+@media (max-width: 900px) { .container-responsive { max-width: 100%; } }
+
+/* ─── Image helpers ─── */
 .img-400x300-cover {
-  width: 400px;
-  height: 300px;
-  object-fit: cover;
-  display: block;
+  width: 400px; height: 300px;
+  object-fit: cover; display: block;
 }
-.img-full-cover {
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-  display: block;
+.img-full-cover { width: 100%; height: auto; object-fit: cover; display: block; }
+@media (max-width: 640px) {
+  .img-400x300-cover { width: 100%; max-width: 100%; height: auto; aspect-ratio: 4/3; }
 }
 
-/* progress bar components (width of .progress-fill is set inline for percent) */
+/* ─── Progress bar ─── */
 .progress-outer {
-  width: 100%;
-  height: 12px;
-  background: #eef2ff;
-  border-radius: 8px;
+  width: 100%; height: 8px;
+  background: var(--bg-subtle);
+  border-radius: 999px;
   overflow: hidden;
 }
 .progress-fill {
   height: 100%;
-  background: #2563eb;
+  background: var(--primary);
   width: 0%;
-  transition: width 0.45s ease;
+  transition: width 0.5s ease;
+  border-radius: 999px;
 }
 
-/* receipt list/grid */
+/* ─── Receipt grid ─── */
 .receipt-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -106,124 +138,16 @@
   margin-top: 12px;
 }
 .receipt-card {
-  border: 1px solid #eee;
+  border: 1px solid var(--border);
   padding: 8px;
-  border-radius: 6px;
-  background: #fff;
+  border-radius: var(--radius);
+  background: var(--bg-card);
 }
-.receipt-meta {
-  font-size: 12px;
-  color: #333;
-}
-.receipt-sub {
-  font-size: 12px;
-  color: #666;
-  margin-top: 6px;
-}
-.no-receipt {
-  color: #666;
-}
+.receipt-meta { font-size: 12px; color: var(--text); }
+.receipt-sub  { font-size: 12px; color: var(--text-sub); margin-top: 6px; }
+.no-receipt   { color: var(--text-muted); }
 
-/* small helpers */
-.hint-small {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-/* 全体のスタイル */
-body {
-  font-family: Arial, Helvetica, sans-serif;
-  background-color: #f8f9fa;
-  color: #333;
-  line-height: 1.6;
-}
-
-/* Shared CSS custom properties (for modules like PaymentSchedule) */
-:root {
-  --gap: 8px;
-  --pad: 8px;
-  --muted: #666;
-  --border: #eee;
-  --input-border: #ddd;
-  /* ReceiptList variables */
-  --bg-light: #fafafa;
-  --bg-hover: #f1f1f1;
-  --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-/* App root flex layout so footer sits at the bottom on short pages */
-.appRoot {
-  display: flex;
-  min-height: 100vh;
-  flex-direction: column;
-}
-
-/* 見出しなど */
-h1 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-}
-
-p {
-  margin-bottom: 1rem;
-}
-
-/* ------------------------------------------
-   Responsive enhancements (mobile-first)
-   ------------------------------------------ */
-html,
-body {
-  overscroll-behavior-y: contain;
-}
-body {
-  overflow-x: hidden;
-}
-
-/* Fluid heading scale */
-@media (max-width: 640px) {
-  h1 {
-    font-size: 1.6rem;
-  }
-}
-
-/* Generic responsive container utility */
-.container-responsive {
-  width: 100%;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 16px;
-  padding-right: 16px;
-  max-width: 1100px; /* matches dashboard container */
-}
-@media (max-width: 900px) {
-  .container-responsive {
-    max-width: 100%;
-  }
-}
-
-/* Ensure fixed-size cover images shrink on small screens */
-@media (max-width: 640px) {
-  .img-400x300-cover {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    aspect-ratio: 4/3;
-  }
-}
-
-/* Common flex/grid adjustments for narrow viewports */
-@media (max-width: 900px) {
-  .tabs {
-    flex-wrap: wrap;
-  }
-}
 @media (max-width: 780px) {
-  .receipt-grid {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  }
+  .receipt-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
 }
-
-/* Utility: hide overflow horizontally for wide tables on mobile */
-.scroll-x {
-  overflow-x: auto;
-}
+@media (max-width: 900px) { .tabs { flex-wrap: wrap; } }
