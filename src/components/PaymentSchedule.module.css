@@ -1,10 +1,25 @@
+.scheduleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .yearLabel {
-  margin-bottom: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.scheduleProgress {
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: #2563EB;
+  background: #EFF6FF;
+  padding: 4px 12px;
+  border-radius: 999px;
 }
 
 .loading {

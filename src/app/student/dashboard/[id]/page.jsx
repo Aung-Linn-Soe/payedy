@@ -226,64 +226,132 @@ export default function StudentDashboardIdPage() {
       </header>
 
       {activeTab === "overview" && (
-        <section className={styles.card}>
-          <h1 className={styles.title}>支払い状況 — {student?.studentId || routeId}</h1>
-          <div className={styles.infoBox}><div>コース: {courseInfo?.name ?? student?.courseKey ?? "未設定"}</div></div>
-          <div className={styles["progress-row"]}><span className={styles.label}>支払い進捗</span><span className={styles.percent}>{progress.toFixed(1)}%</span></div>
-          <div className={styles["progress-wrap"]}><div className={styles["progress-bar"]} style={{ width: `${progress}%` }} /></div>
-          <div className={styles.stats}>
-            <article className={styles.stat}><div className={styles["stat-label"]}>総学費</div><div className={styles["stat-value"]}>{total.toLocaleString()}円</div></article>
-            <article className={styles.stat}><div className={styles["stat-label"]}>支払い済み</div><div className={`${styles["stat-value"]} ${styles.paid}`}>{paid.toLocaleString()}円</div></article>
-            <article className={styles.stat}><div className={styles["stat-label"]}>残り</div><div className={`${styles["stat-value"]} ${styles.remain}`}>{remaining.toLocaleString()}円</div></article>
-          </div>
-
-          {isTeacher && (
-            <div style={{ marginTop: 16, padding: 12, background: "#f9fafb", borderRadius: 8 }}>
-              <h3>割引管理</h3>
-              {discounts.map((d) => (
-                <div key={d.id} style={{ display: "flex", gap: 8, marginBottom: 4 }}>
-                  <span>{d.reason}</span><span>¥{Number(d.amount).toLocaleString()}</span>
-                </div>
-              ))}
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <input type="text" placeholder="理由" value={newReason} onChange={(e) => setNewReason(e.target.value)} style={{ flex: 1 }} />
-                <input type="number" placeholder="金額" value={newAmount} onChange={(e) => setNewAmount(e.target.value)} style={{ width: 100 }} />
-                <button onClick={handleAddDiscount}>追加</button>
+        <div className={styles.overviewWrap}>
+          {/* Profile header */}
+          <section className={styles.card}>
+            <div className={styles.profileHeader}>
+              <div className={styles.avatarCircle}>
+                {(student?.name || session?.user?.name || "?").charAt(0).toUpperCase()}
               </div>
-              <button onClick={handleMigrateYear} disabled={migrating} style={{ marginTop: 8 }}>
+              <div className={styles.profileHeaderInfo}>
+                <div className={styles.profileHeaderName}>{student?.name || session?.user?.name || "未設定"}</div>
+                <div className={styles.profileHeaderMeta}>
+                  <span>{student?.studentId || routeId}</span>
+                  <span className={styles.dot}>·</span>
+                  <span>{courseInfo?.name ?? student?.courseKey ?? "未設定"}</span>
+                  {student?.gradeJP && <><span className={styles.dot}>·</span><span>{student.gradeJP}</span></>}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Progress + Stats */}
+          <section className={styles.card}>
+            <div className={styles["progress-row"]}>
+              <span className={styles.label}>支払い進捗</span>
+              <span className={styles.percent}>{progress.toFixed(1)}%</span>
+            </div>
+            <div className={styles["progress-wrap"]}>
+              <div className={styles["progress-bar"]} style={{ width: `${progress}%` }} />
+            </div>
+            <div className={styles.stats}>
+              <article className={styles.stat}>
+                <div className={styles["stat-label"]}>総学費</div>
+                <div className={styles["stat-value"]}>{total.toLocaleString()}円</div>
+              </article>
+              <article className={styles.stat}>
+                <div className={styles["stat-label"]}>支払い済み</div>
+                <div className={`${styles["stat-value"]} ${styles.paid}`}>{paid.toLocaleString()}円</div>
+              </article>
+              <article className={styles.stat}>
+                <div className={styles["stat-label"]}>残り</div>
+                <div className={`${styles["stat-value"]} ${styles.remain}`}>{remaining.toLocaleString()}円</div>
+              </article>
+            </div>
+          </section>
+
+          {/* Teacher: discount panel */}
+          {isTeacher && (
+            <section className={styles.card}>
+              <h3 className={styles.sectionTitle}>割引管理</h3>
+              {discounts.length > 0 && (
+                <div className={styles.discountListBox}>
+                  {discounts.map((d) => (
+                    <div key={d.id} className={styles.discountItem}>
+                      <span className={styles.discountReason}>{d.reason}</span>
+                      <span className={styles.discountAmt}>−¥{Number(d.amount).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className={styles.discountForm}>
+                <input className={styles.discountInput} type="text" placeholder="割引理由" value={newReason} onChange={(e) => setNewReason(e.target.value)} />
+                <input className={styles.discountAmount} type="number" placeholder="金額" value={newAmount} onChange={(e) => setNewAmount(e.target.value)} />
+                <button className={styles.discountSave} onClick={handleAddDiscount}>追加</button>
+              </div>
+              <button className={styles.migrateBtn} onClick={handleMigrateYear} disabled={migrating}>
                 {migrating ? "移行中..." : "年度移行"}
               </button>
-            </div>
+            </section>
           )}
 
-          <div className={styles.tableWrap}>
-            <table className={styles.paymentTable}>
-              <tbody>
-                {payments.map((p) => {
-                  const date = p.createdAt ? new Date(p.createdAt) : new Date();
-                  return (
-                    <tr key={p.paymentId || p.id}>
-                      <td>{date.toLocaleDateString("ja-JP")}</td>
-                      <td>{date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</td>
-                      <td>¥{p.amount?.toLocaleString()}</td>
-                      <td>{p.paymentMethod || "-"}</td>
-                      <td>
-                        <div className={styles.paymentAction}>
-                          {p.receiptBase64 ? <img src={p.receiptBase64} alt="receipt" className={receiptStyles.thumb} onClick={() => setLightboxSrc(p.receiptBase64)} /> : <div className={receiptStyles.placeholder}><span className={receiptStyles.placeholderText}>No image</span></div>}
-                          <button className={styles.deleteBtn} onClick={() => handleDeletePayment(p.paymentId || p.id)}>削除</button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          {lightboxSrc && <div className={receiptStyles.modal} onClick={() => setLightboxSrc(null)}><div className={receiptStyles.modalContent} onClick={(e) => e.stopPropagation()}><button className={receiptStyles.closeBtn} onClick={() => setLightboxSrc(null)}>×</button><img src={lightboxSrc} alt="receipt-large" className={receiptStyles.modalImage} /></div></div>}
-        </section>
+          {/* Payment history */}
+          <section className={styles.card}>
+            <h3 className={styles.sectionTitle}>支払い履歴</h3>
+            {payments.length === 0 ? (
+              <p className={styles.emptyMsg}>支払い履歴がありません</p>
+            ) : (
+              <div className={styles.tableWrap}>
+                <table className={styles.paymentTable}>
+                  <thead>
+                    <tr><th>日付</th><th>金額</th><th>方法</th><th>領収書</th></tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p) => {
+                      const date = p.createdAt ? new Date(p.createdAt) : new Date();
+                      return (
+                        <tr key={p.paymentId || p.id}>
+                          <td>
+                            <div className={styles.dateCell}>
+                              <span>{date.toLocaleDateString("ja-JP")}</span>
+                              <span className={styles.timeText}>{date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</span>
+                            </div>
+                          </td>
+                          <td className={styles.amountCell}>¥{Number(p.amount).toLocaleString()}</td>
+                          <td>{p.paymentMethod || "-"}</td>
+                          <td>
+                            <div className={styles.paymentAction}>
+                              {p.receiptBase64
+                                ? <img src={p.receiptBase64} alt="receipt" className={receiptStyles.thumb} onClick={() => setLightboxSrc(p.receiptBase64)} />
+                                : <span className={styles.noImg}>なし</span>}
+                              <button className={styles.deleteBtn} onClick={() => handleDeletePayment(p.paymentId || p.id)}>削除</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          {lightboxSrc && (
+            <div className={receiptStyles.modal} onClick={() => setLightboxSrc(null)}>
+              <div className={receiptStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+                <button className={receiptStyles.closeBtn} onClick={() => setLightboxSrc(null)}>×</button>
+                <img src={lightboxSrc} alt="receipt-large" className={receiptStyles.modalImage} />
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
-      {activeTab === "history" && <section className={styles.card}><PaymentSchedule student={student} courseInfo={courseInfo} payments={payments} /></section>}
+      {activeTab === "history" && (
+        <section className={styles.card}>
+          <PaymentSchedule student={student} courseInfo={courseInfo} payments={payments} />
+        </section>
+      )}
 
       {activeTab === "upload" && (
         <section className={styles.uploadSection}>
@@ -353,11 +421,28 @@ export default function StudentDashboardIdPage() {
 
       {activeTab === "profile" && (
         <section className={styles.card}>
-          <h2 style={{ textAlign: "center" }}>プロフィール</h2>
-          <div style={{ padding: 12, textAlign: "center" }}>
-            <p>名前: {student?.name || session?.user?.name}</p>
-            <p>メール: {student?.email || session?.user?.email}</p>
-            <p>学籍番号: {student?.studentId || routeId || "未登録"}</p>
+          <div className={styles.profilePageWrap}>
+            <div className={styles.profilePageAvatar}>
+              {session?.user?.image
+                ? <img src={session.user.image} alt="avatar" className={styles.profilePageImg} referrerPolicy="no-referrer" />
+                : <span>{(student?.name || session?.user?.name || "?").charAt(0).toUpperCase()}</span>
+              }
+            </div>
+            <div className={styles.profilePageName}>{student?.name || session?.user?.name || "未設定"}</div>
+            <div className={styles.profileGrid}>
+              {[
+                { label: "メールアドレス", value: student?.email || session?.user?.email || "-" },
+                { label: "学籍番号", value: student?.studentId || routeId || "未登録" },
+                { label: "コース", value: courseInfo?.name ?? student?.courseKey ?? "未設定" },
+                { label: "学年", value: student?.gradeJP || "-" },
+                { label: "入学年", value: student?.entranceYear ? `${student.entranceYear}年` : "-" },
+              ].map(({ label, value }) => (
+                <div key={label} className={styles.profileGridItem}>
+                  <span className={styles.profileGridLabel}>{label}</span>
+                  <span className={styles.profileGridValue}>{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}
