@@ -54,9 +54,14 @@ export function createOrGetUserByEmail(email, name, nameKana = "") {
   return newUser;
 }
 
+// Emails allowed regardless of domain (special exceptions)
+const ALLOWED_EMAILS = ["alynnsoe@gmail.com"];
+
 export function isAllowedInstitutionEmail(email) {
   if (!email) return false;
-  const parts = String(email).toLowerCase().split("@");
+  const lower = String(email).toLowerCase();
+  if (ALLOWED_EMAILS.includes(lower)) return true;
+  const parts = lower.split("@");
   if (parts.length !== 2) return false;
   const domain = parts[1];
   return (
@@ -70,14 +75,17 @@ export function isAllowedInstitutionEmail(email) {
 // Returns either 'student' or 'teacher' (defaults to 'student')
 export function determineRoleByEmail(email) {
   if (!email) return "student";
-  const parts = String(email).toLowerCase().split("@");
+  const lower = String(email).toLowerCase();
+  const parts = lower.split("@");
   if (parts.length !== 2) return "student";
   const [local, domain] = parts;
-  // Allow both osfl.ac.jp and std.it-college.ac.jp domains
-  if (
-    !(domain.endsWith("osfl.ac.jp") || domain.endsWith("std.it-college.ac.jp"))
-  )
+  // Special exception emails: determine role by local part pattern
+  if (!domain.endsWith("osfl.ac.jp") && !domain.endsWith("std.it-college.ac.jp")) {
+    if (!ALLOWED_EMAILS.includes(lower)) return "student";
+    // Exception email: alphabetic-only local = teacher, otherwise student
+    if (/^[a-z._-]+$/i.test(local)) return "teacher";
     return "student";
+  }
 
   // Student pattern: starts with W or K followed by digits, e.g. W24002 or K12345
   if (/^[wk]\d{1,}$/i.test(local)) return "student";

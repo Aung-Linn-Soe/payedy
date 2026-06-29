@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Student {
+  id           Int       @id @default(autoincrement())
+  studentId    String    @unique
+  email        String    @unique
+  name         String    @default("")
+  nameKana     String    @default("")
+  courseId     String    @default("")
+  courseKey    String    @default("")
+  courseDocId  String?
+  startMonth   String    @default("")
+  entranceYear Int?
+  grade        String    @default("")
+  gradeJP      String    @default("")
+  gradeEN      String    @default("")
+  totalFees    Float?
+  paidAmount   Float?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  paymentSchedules PaymentSchedule[]
+  discounts        Discount[]
+}
+
+model Course {
+  id                  Int      @id @default(autoincrement())
+  code                String   @unique
+  name                String
+  nameJa              String?
+  nameEn              String?
+  tuition             Int      @default(0)
+  courseKey           String   @default("")
+  year                String   @default("")
+  pricePerMonth       Int?
+  fee                 Int?
+  monthlyTemplate     Json?
+  paymentAcademicYear Int?
+  students            Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Payment {
+  id            Int       @id @default(autoincrement())
+  paymentId     String    @unique @default(cuid())
+  studentId     String
+  course        String    @default("")
+  receiptBase64 String?   @db.Text
+  receiptUrl    String?
+  amount        Float     @default(0)
+  paymentMethod String    @default("銀行振込")
+  status        String    @default("支払い済み")
+  month         String    @default("")
+  verified      Boolean   @default(false)
+  riskScore     Float?
+  approvedBy    Json?
+  approvedAt    DateTime?
+  rejectReason  String?
+  rejectedBy    Json?
+  rejectedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  uploadedAt    DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model PaymentSchedule {
+  id         Int      @id @default(autoincrement())
+  studentId  String
+  month      String
+  dueDate    String   @default("")
+  dueAmount  Float    @default(0)
+  paidAmount Float    @default(0)
+  status     String   @default("未払い")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [studentId])
+
+  @@unique([studentId, month])
+}
+
+model Discount {
+  id        Int      @id @default(autoincrement())
+  studentId String
+  amount    Float    @default(0)
+  reason    String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [studentId])
+}

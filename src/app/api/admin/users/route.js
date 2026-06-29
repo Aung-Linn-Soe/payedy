@@ -1,42 +1,55 @@
+import { prisma } from "@/lib/prisma";
 import { listUsers, updateUserRole, updateUser } from "@/data/users";
-import { adminDb, default as admin } from "@/firebase/adminApp";
 
 export async function GET() {
-  return new Response(JSON.stringify(listUsers()), { status: 200 });
+  // Merge in-memory seed users with DB students
+  const dbStudents = await prisma.student.findMany({
+    orderBy: { createdAt: "asc" },
+  });
+  const seedUsers = listUsers();
+  const dbMap = new Map(dbStudents.map((s) => [s.studentId, s]));
+  // Merge: DB takes precedence
+  const merged = [
+    ...seedUsers.filter((u) => !dbMap.has(u.studentId)),
+    ...dbStudents.map((s) => ({
+      id: String(s.id),
+      studentId: s.studentId,
+      name: s.name,
+      email: s.email,
+      courseId: s.courseId || "",
+      role: s.role || "student",
+    })),
+  ];
+  return new Response(JSON.stringify(merged), { status: 200 });
 }
 
 export async function POST(req) {
   const body = await req.json();
-  const { studentId, role } = body;
+  const { studentId, role, courseId, course, name, email } = body;
+  if (!studentId) return new Response("Missing studentId", { status: 400 });
+
+  const updates = {};
+  if (role) updates.role = role;
+  if (courseId || course) updates.courseId = courseId ?? course;
+  if (name) updates.name = name;
+  if (email) updates.email = email;
+
+  // Try to update in DB first
   let updated = null;
-  if (role) {
-    updated = updateUserRole(studentId, role);
-  }
-  // allow updating courseId (or legacy course), name or email via updateUser
-  if (body.courseId || body.course || body.name || body.email) {
-    // update in-memory user (prefer courseId)
-    updated = updateUser(studentId, {
-      courseId: body.courseId ?? body.course,
-      name: body.name,
-      email: body.email,
+  try {
+    updated = await prisma.student.update({
+      where: { studentId: String(studentId) },
+      data: updates,
     });
-    // write the student's Firestore doc so student dashboard can read updated fields
-    try {
-      const writeData = {
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      };
-      if (body.courseId || body.course)
-        writeData.courseId = body.courseId ?? body.course;
-      if (body.name) writeData.name = body.name;
-      if (body.email) writeData.email = body.email;
-      await adminDb
-        .collection("students")
-        .doc(String(studentId))
-        .set(writeData, { merge: true });
-    } catch (err) {
-      console.error("Failed to write student data to Firestore (server):", err);
+  } catch (e) {
+    if (e?.code !== "P2025") throw e;
+    // Not in DB — update in-memory seed users
+    if (role) updateUserRole(studentId, role);
+    if (courseId || course || name || email) {
+      updateUser(studentId, { courseId: courseId ?? course, name, email });
     }
+    updated = { studentId };
   }
-  if (!updated) return new Response("Not found", { status: 404 });
+
   return new Response(JSON.stringify(updated), { status: 200 });
 }

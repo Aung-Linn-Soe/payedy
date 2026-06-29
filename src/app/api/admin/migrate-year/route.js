@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { adminDb } from "@/firebase/adminApp";
+import { prisma } from "@/lib/prisma";
 
-// POST /api/admin/migrate-year
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session)
-      return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
     const role = session?.user?.role;
     const isAdmin = session?.user?.isAdmin;
@@ -18,81 +16,48 @@ export async function POST(req) {
 
     const body = await req.json();
     const { studentId, fromYear } = body || {};
-    if (!studentId)
-      return NextResponse.json(
-        { error: "studentId required" },
-        { status: 400 }
-      );
+    if (!studentId) return NextResponse.json({ error: "studentId required" }, { status: 400 });
 
     const y1 = fromYear ? Number(fromYear) : new Date().getFullYear() - 1;
     const y2 = y1 + 1;
 
-    // Load all paymentSchedules for the student
-    const schedulesRef = adminDb
-      .collection("students")
-      .doc(studentId)
-      .collection("paymentSchedules");
-    const snap = await schedulesRef.get();
-    const docs = [];
-    snap.forEach((d) => docs.push({ id: d.id, ...d.data() }));
+    const allSchedules = await prisma.paymentSchedule.findMany({
+      where: { studentId },
+    });
 
-    const year1Docs = docs.filter(
+    const year1Docs = allSchedules.filter(
       (d) => typeof d.month === "string" && d.month.startsWith(`${y1}-`)
     );
-    const year2Docs = docs.filter(
+    const year2Docs = allSchedules.filter(
       (d) => typeof d.month === "string" && d.month.startsWith(`${y2}-`)
     );
 
-    const totalDueYear1 = year1Docs.reduce(
-      (s, d) => s + (Number(d.dueAmount) || 0),
-      0
-    );
-    const totalPaidYear1 = year1Docs.reduce(
-      (s, d) => s + (Number(d.paidAmount) || 0),
-      0
-    );
+    const totalDueYear1 = year1Docs.reduce((s, d) => s + (Number(d.dueAmount) || 0), 0);
+    const totalPaidYear1 = year1Docs.reduce((s, d) => s + (Number(d.paidAmount) || 0), 0);
     const remainingYear1 = Math.max(totalDueYear1 - totalPaidYear1, 0);
     if (remainingYear1 <= 0) {
-      return NextResponse.json({
-        migrated: false,
-        reason: "no remaining balance for fromYear",
-      });
+      return NextResponse.json({ migrated: false, reason: "no remaining balance for fromYear" });
     }
 
-    const existingTotalYear2 = year2Docs.reduce(
-      (s, d) => s + (Number(d.dueAmount) || 0),
-      0
-    );
+    const existingTotalYear2 = year2Docs.reduce((s, d) => s + (Number(d.dueAmount) || 0), 0);
     const newTotalYear2 = existingTotalYear2 + remainingYear1;
 
-    // Try to fetch course template if available (student.doc -> courseDocId)
+    // Fetch course template if available
     let monthlyTemplate = {};
     let pricePerMonth = null;
     try {
-      const studentSnap = await adminDb
-        .collection("students")
-        .doc(studentId)
-        .get();
-      if (studentSnap.exists) {
-        const sdata = studentSnap.data();
-        const courseDocId = sdata?.courseDocId;
-        if (courseDocId) {
-          const courseSnap = await adminDb
-            .collection("courses")
-            .doc(courseDocId)
-            .get();
-          if (courseSnap.exists) {
-            const c = courseSnap.data();
-            monthlyTemplate = c?.monthlyTemplate || {};
-            pricePerMonth = c?.pricePerMonth || null;
-          }
+      const student = await prisma.student.findUnique({ where: { studentId } });
+      if (student?.courseDocId) {
+        const course = await prisma.course.findFirst({
+          where: { code: student.courseDocId },
+        });
+        if (course) {
+          monthlyTemplate = course.monthlyTemplate || {};
+          pricePerMonth = course.pricePerMonth || null;
         }
       }
     } catch (e) {
-      console.warn(
-        "Failed to fetch course template, continuing without it:",
-        e
-      );
+      console.warn("Failed to fetch course template:", e);
     }
 
     const months = [];
@@ -109,10 +74,7 @@ export async function POST(req) {
       for (const mm of months) {
         const base = Number(monthlyTemplate[mm] || 0);
         let add = baseAdd;
-        if (rem > 0) {
-          add += 1;
-          rem -= 1;
-        }
+        if (rem > 0) { add += 1; rem -= 1; }
         desiredPerMonth[mm] = Math.max(0, base + add);
       }
     } else if (pricePerMonth != null) {
@@ -123,10 +85,7 @@ export async function POST(req) {
       let rem = adjustment - baseAdd * months.length;
       for (const mm of months) {
         let val = base + baseAdd;
-        if (rem > 0) {
-          val += 1;
-          rem -= 1;
-        }
+        if (rem > 0) { val += 1; rem -= 1; }
         desiredPerMonth[mm] = Math.max(0, val);
       }
     } else {
@@ -134,51 +93,34 @@ export async function POST(req) {
       let rem = newTotalYear2 - base * months.length;
       for (const mm of months) {
         let val = base;
-        if (rem > 0) {
-          val += 1;
-          rem -= 1;
-        }
+        if (rem > 0) { val += 1; rem -= 1; }
         desiredPerMonth[mm] = Math.max(0, val);
       }
     }
 
-    // Use batch write for atomic-ish update
-    const batch = adminDb.batch();
-    for (const mm of months) {
-      const id = `${y2}-${mm}`;
-      const due = desiredPerMonth[mm] || 0;
-      const existing = year2Docs.find((d) => d.id === id);
-      const paid = Number(existing?.paidAmount || 0);
-      let status = "未払い";
-      if (paid <= 0) status = "未払い";
-      else if (paid >= due) status = "支払い済み";
-      else status = "一部支払い";
+    // Batch upsert payment schedules
+    await Promise.all(
+      months.map(async (mm) => {
+        const id = `${y2}-${mm}`;
+        const due = desiredPerMonth[mm] || 0;
+        const existing = year2Docs.find((d) => d.month === id);
+        const paid = Number(existing?.paidAmount || 0);
+        let status = "未払い";
+        if (paid <= 0) status = "未払い";
+        else if (paid >= due) status = "支払い済み";
+        else status = "一部支払い";
 
-      const ref = schedulesRef.doc(id);
-      const payload = {
-        month: id,
-        dueDate: new Date(y2, Number(mm), 0).toISOString().slice(0, 10),
-        dueAmount: due,
-        paidAmount: paid,
-        status,
-        updatedAt: new Date(),
-      };
+        const dueDate = new Date(y2, Number(mm), 0).toISOString().slice(0, 10);
 
-      if (existing) {
-        batch.update(ref, payload);
-      } else {
-        payload.createdAt = new Date();
-        batch.set(ref, payload);
-      }
-    }
+        await prisma.paymentSchedule.upsert({
+          where: { studentId_month: { studentId, month: id } },
+          update: { dueDate, dueAmount: due, paidAmount: paid, status },
+          create: { studentId, month: id, dueDate, dueAmount: due, paidAmount: paid, status },
+        });
+      })
+    );
 
-    await batch.commit();
-
-    return NextResponse.json({
-      migrated: true,
-      addedAmount: remainingYear1,
-      newTotalYear2,
-    });
+    return NextResponse.json({ migrated: true, addedAmount: remainingYear1, newTotalYear2 });
   } catch (err) {
     console.error("/api/admin/migrate-year error:", err);
     return NextResponse.json({ error: "internal" }, { status: 500 });

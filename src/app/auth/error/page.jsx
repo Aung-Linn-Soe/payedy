@@ -46,28 +46,11 @@ export default function AuthErrorPage({ searchParams }) {
       <p style={{ marginBottom: 20 }}>{message}</p>
 
       <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-        <Link href="/login">
-          <a
-            style={{
-              padding: "8px 16px",
-              background: "#0ea5a4",
-              color: "white",
-              borderRadius: 6,
-            }}
-          >
-            ログインに戻る
-          </a>
+        <Link href="/" style={{ padding: "8px 16px", background: "#0ea5a4", color: "white", borderRadius: 6, textDecoration: "none" }}>
+          ログインに戻る
         </Link>
-        <Link href="/">
-          <a
-            style={{
-              padding: "8px 16px",
-              border: "1px solid #ddd",
-              borderRadius: 6,
-            }}
-          >
-            ホームへ
-          </a>
+        <Link href="/" style={{ padding: "8px 16px", border: "1px solid #ddd", borderRadius: 6, textDecoration: "none" }}>
+          ホームへ
         </Link>
       </div>
 

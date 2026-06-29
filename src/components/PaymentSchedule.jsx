@@ -1,238 +1,109 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import ReceiptList from "./ReceiptList";
 import styles from "./PaymentSchedule.module.css";
 import { useSession } from "next-auth/react";
-import {
-  collection,
-  doc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-  query,
-  where,
-} from "firebase/firestore";
-import { db } from "@/firebase/clientApp";
-// Lightweight in-memory cache and in-flight request dedupe to avoid repeated
-// reads when the same page/component is mounted multiple times.
-const schedulesCache = new Map(); // key -> { ts, data }
-const inFlightFetches = new Map(); // key -> Promise
-const CACHE_TTL = 1000 * 60 * 5; // 5 minutes
 
-export default function PaymentSchedule({
-  student,
-  courseInfo,
-  payments = [],
-}) {
+const schedulesCache = new Map();
+const CACHE_TTL = 1000 * 60 * 5;
+
+export default function PaymentSchedule({ student, courseInfo, payments = [] }) {
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(false);
   const { data: session } = useSession();
   const currentRole = session?.user?.role;
   const canEditAmounts = currentRole === "teacher" || currentRole === "admin";
-
   const studentId = student?.studentId;
 
   const determineScheduleYear = () => {
-    // Always prefer explicit `paymentAcademicYear` from courseInfo (never rely on current year)
-    const val =
-      courseInfo?.paymentAcademicYear ??
-      (courseInfo?.payment && courseInfo.payment.paymentAcademicYear) ??
-      null;
-    if (val == null) return null;
-    return Number(val);
+    const val = courseInfo?.paymentAcademicYear ?? null;
+    if (val != null) return Number(val);
+    // Fallback: compute current academic year (April start)
+    const now = new Date();
+    return now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
   };
 
-  // Fetch schedules once per page (deduped + cached). Also create missing
-  // monthly documents without doing another full read (we build created
-  // payloads locally and append them to the result) so that we keep reads low.
-  const fetchAndEnsureSchedules = useCallback(
-    async (targetYear) => {
-      if (!studentId) return [];
+  const fetchAndEnsureSchedules = useCallback(async (targetYear) => {
+    if (!studentId) return [];
+    const year = targetYear || determineScheduleYear();
 
-      const year = targetYear || determineScheduleYear();
+    const cacheKey = year ? `${studentId}-${year}` : `${studentId}-noyear`;
+    const cached = schedulesCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      setSchedules(cached.data);
+      return cached.data;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/students/${studentId}/schedules`);
+      const existing = res.ok ? await res.json() : [];
+
       if (!year) {
-        console.warn(
-          "paymentAcademicYear is missing — cannot generate schedules without it."
-        );
-        // still set any existing schedules from the DB (but avoid creating missing months)
-        try {
-          const ref = collection(db, "students", studentId, "paymentSchedules");
-          const snapExisting = await getDocs(ref);
-          const filteredDocs = snapExisting.docs
-            .map((d) => ({ id: d.id, ...d.data() }))
-            .filter((d) => typeof d.month === "string")
-            .sort((a, b) => a.month.localeCompare(b.month));
-          schedulesCache.set(`${studentId}-missing-year`, {
-            ts: Date.now(),
-            data: filteredDocs,
-          });
-          setSchedules(filteredDocs);
-          return filteredDocs;
-        } catch (e) {
-          console.warn("failed to read existing schedules:", e);
-          return [];
-        }
-      }
-      const cacheKey = `${studentId}-${year}`;
-      const now = Date.now();
-
-      // Return cached copy if fresh
-      const cached = schedulesCache.get(cacheKey);
-      if (cached && now - cached.ts < CACHE_TTL) {
-        setSchedules(cached.data);
-        return cached.data;
+        const sorted = existing.filter((d) => typeof d.month === "string").sort((a, b) => a.month.localeCompare(b.month));
+        schedulesCache.set(cacheKey, { ts: Date.now(), data: sorted });
+        setSchedules(sorted);
+        return sorted;
       }
 
-      // If another fetch is in-flight for same key, await it
-      if (inFlightFetches.has(cacheKey)) {
-        try {
-          const data = await inFlightFetches.get(cacheKey);
-          setSchedules(data);
-          return data;
-        } catch (e) {
-          inFlightFetches.delete(cacheKey);
-          throw e;
-        }
+      // Ensure months Feb(2)–Oct(10) exist
+      const existingMap = new Map(existing.map((d) => [d.month, d]));
+      const teacherMonthly = courseInfo?.pricePerMonth != null ? Number(courseInfo.pricePerMonth) : null;
+      const monthlyTemplate = courseInfo?.monthlyTemplate || {};
+      const total = Number(courseInfo?.totalFee ?? courseInfo?.pricePerMonth) || student?.totalFees || 0;
+      const base = Math.floor(total / 9);
+      const remainder = total - base * 9;
+
+      const toCreate = [];
+      for (let m = 2; m <= 10; m++) {
+        const id = `${year}-${String(m).padStart(2, "0")}`;
+        if (existingMap.has(id)) continue;
+        const mm = String(m).padStart(2, "0");
+        let dueAmount = 0;
+        if (monthlyTemplate[mm] != null) dueAmount = Number(monthlyTemplate[mm]) || 0;
+        else if (teacherMonthly !== null) dueAmount = teacherMonthly;
+        else { const extra = remainder > 0 && m - 2 < remainder ? 1 : 0; dueAmount = base + extra; }
+        const dueDate = new Date(year, m, 0).toISOString().slice(0, 10);
+        toCreate.push({ month: id, dueDate, dueAmount, paidAmount: 0, status: "未払い" });
       }
 
-      const p = (async () => {
-        setLoading(true);
-        try {
-          const ref = collection(db, "students", studentId, "paymentSchedules");
-          const snap = await getDocs(ref); // single read for the page
-
-          const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-          // Ensure months Feb(2) - Oct(10) exist. Create missing ones by
-          // issuing setDoc but avoid re-reading the collection afterwards.
-          const existingIds = new Set(docs.map((d) => d.id));
-
-          const yearVal = year;
-          const teacherMonthly =
-            courseInfo?.pricePerMonth != null
-              ? Number(courseInfo.pricePerMonth)
-              : null;
-          const monthlyTemplate = courseInfo?.monthlyTemplate || {};
-
-          let base = 0;
-          let remainder = 0;
-          if (!teacherMonthly) {
-            const total =
-              Number(courseInfo?.totalFee ?? courseInfo?.pricePerMonth) ||
-              student?.totalFees ||
-              0;
-            base = Math.floor(total / 9);
-            remainder = total - base * 9;
-          }
-
-          const createdPayloads = [];
-          const ops = [];
-          for (let m = 2; m <= 10; m++) {
-            const id = `${yearVal}-${String(m).padStart(2, "0")}`;
-            if (existingIds.has(id)) continue;
-
-            const lastDay = new Date(yearVal, m, 0);
-            const dueDate = lastDay.toISOString().slice(0, 10);
-
-            const mm = String(m).padStart(2, "0");
-            let dueAmount = 0;
-            if (monthlyTemplate[mm] != null) {
-              dueAmount = Number(monthlyTemplate[mm]) || 0;
-            } else if (teacherMonthly !== null) {
-              dueAmount = teacherMonthly;
-            } else {
-              const extra = remainder > 0 && m - 2 < remainder ? 1 : 0;
-              dueAmount = base + extra;
-            }
-
-            const payload = {
-              id,
-              month: id,
-              dueDate,
-              dueAmount,
-              paidAmount: 0,
-              status: "未払い",
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            };
-
-            // record locally so we can append to result without extra read
-            createdPayloads.push(payload);
-            const refDoc = doc(ref, id);
-            ops.push(setDoc(refDoc, payload));
-          }
-
-          // Fire off creations in parallel but don't wait for them to re-read
-          // collection (we'll use combined local view instead)
-          if (ops.length > 0) await Promise.all(ops);
-
-          const combined = docs.concat(createdPayloads);
-
-          // Filter to requested year and months, and sort
-          const filtered = combined
-            .filter(
-              (s) =>
-                typeof s.month === "string" && s.month.startsWith(`${yearVal}-`)
-            )
-            .filter((s) => {
-              const mm = Number((s.month || "").slice(5, 7));
-              return mm >= 2 && mm <= 10;
-            })
-            .sort((a, b) => a.month.localeCompare(b.month));
-
-          schedulesCache.set(cacheKey, { ts: Date.now(), data: filtered });
-          return filtered;
-        } finally {
-          setLoading(false);
-        }
-      })();
-
-      inFlightFetches.set(cacheKey, p);
-      try {
-        const data = await p;
-        inFlightFetches.delete(cacheKey);
-        setSchedules(data);
-        return data;
-      } catch (e) {
-        inFlightFetches.delete(cacheKey);
-        console.warn("fetchAndEnsureSchedules failed:", e);
-        throw e;
+      if (toCreate.length > 0) {
+        await fetch(`/api/students/${studentId}/schedules`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(toCreate),
+        }).catch((e) => console.warn("schedule create failed:", e));
+        toCreate.forEach((d) => existingMap.set(d.month, d));
       }
-    },
-    // Keep deps minimal to avoid repeated calls; cache handles dedupe.
-    // Do include courseInfo and student totals because they affect created dueAmount.
-    [studentId, courseInfo, student?.totalFees]
-  );
 
-  // Run once when studentId changes. This fixes useEffect dependency churn and
-  // ensures we do exactly one page read (deduped via cache/in-flight).
+      const filtered = Array.from(existingMap.values())
+        .filter((s) => typeof s.month === "string" && s.month.startsWith(`${year}-`))
+        .filter((s) => { const mm = Number((s.month || "").slice(5, 7)); return mm >= 2 && mm <= 10; })
+        .sort((a, b) => a.month.localeCompare(b.month));
+
+      schedulesCache.set(cacheKey, { ts: Date.now(), data: filtered });
+      setSchedules(filtered);
+      return filtered;
+    } catch (e) {
+      console.warn("fetchAndEnsureSchedules failed:", e);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [studentId, courseInfo, student?.totalFees]);
+
   useEffect(() => {
     if (!studentId) return;
     fetchAndEnsureSchedules();
-    // Intentionally only depend on studentId so this effect doesn't re-run
-    // due to parent re-renders or changed callbacks.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studentId]);
+  }, [studentId, courseInfo?.paymentAcademicYear]);
 
-  // Allocate payments to schedule months (FIFO) and persist paidAmount/status
-  // only when changed. This effect runs when `payments` or `schedules` update.
+  // Allocate payments → schedules
   useEffect(() => {
-    if (!studentId) return;
-    if (!schedules || schedules.length === 0) return;
+    if (!studentId || !schedules.length) return;
 
-    // Build payment entries without extra reads
     const paymentEntries = (payments || [])
-      .map((p) => ({
-        id: p.id || p.receiptUrl || Math.random().toString(36).slice(2),
-        amount: Number(p.amount) || 0,
-        createdAt:
-          (p.createdAt && p.createdAt.toDate && p.createdAt.toDate()) ||
-          (p.createdAt instanceof Date ? p.createdAt : new Date()),
-        original: p,
-        remaining: Number(p.amount) || 0,
-      }))
+      .map((p) => ({ ...p, remaining: Number(p.amount) || 0, createdAt: p.createdAt ? new Date(p.createdAt) : new Date() }))
       .sort((a, b) => a.createdAt - b.createdAt);
 
     const allocation = {};
@@ -240,127 +111,59 @@ export default function PaymentSchedule({
       const due = Number(s.dueAmount) || 0;
       let allocated = 0;
       const related = [];
-
       while (due - allocated > 0 && paymentEntries.length > 0) {
         const head = paymentEntries[0];
-        if (!head || head.remaining <= 0) {
-          paymentEntries.shift();
-          continue;
-        }
-        const need = due - allocated;
-        const take = Math.min(need, head.remaining);
+        if (!head || head.remaining <= 0) { paymentEntries.shift(); continue; }
+        const take = Math.min(due - allocated, head.remaining);
         allocated += take;
         head.remaining -= take;
-        related.push({ ...head.original, _appliedAmount: take });
+        related.push({ ...head, _appliedAmount: take });
         if (head.remaining <= 0) paymentEntries.shift();
       }
-
       let status = "未払い";
-      if (allocated <= 0) status = "未払い";
-      else if (allocated >= due) status = "支払い済み";
-      else status = "一部支払い";
-
-      allocation[s.month] = {
-        paid: allocated,
-        status,
-        relatedPayments: related,
-      };
+      if (allocated > 0 && allocated >= due) status = "支払い済み";
+      else if (allocated > 0) status = "一部支払い";
+      allocation[s.month] = { paid: allocated, status, relatedPayments: related };
     }
 
-    // Persist only necessary updates (minimize writes as well)
-    (async () => {
-      try {
-        const updates = [];
-        for (const s of schedules) {
-          const mapped = allocation[s.month] || { paid: 0, status: "未払い" };
-          const paid = mapped.paid || 0;
-          const status = mapped.status || "未払い";
+    // Persist changed schedules
+    const updates = schedules.filter((s) => {
+      const mapped = allocation[s.month] || { paid: 0, status: "未払い" };
+      return Number(s.paidAmount || 0) !== mapped.paid || s.status !== mapped.status;
+    }).map((s) => {
+      const mapped = allocation[s.month];
+      return { month: s.month, dueDate: s.dueDate, dueAmount: s.dueAmount, paidAmount: mapped.paid, status: mapped.status };
+    });
 
-          const needsUpdate =
-            Number(s.paidAmount || 0) !== paid || s.status !== status;
-          if (needsUpdate) {
-            const ref = doc(
-              db,
-              "students",
-              studentId,
-              "paymentSchedules",
-              s.month
-            );
-            updates.push(
-              updateDoc(ref, {
-                paidAmount: paid,
-                status,
-                updatedAt: serverTimestamp(),
-              }).catch((e) => {
-                console.warn(`Failed to update schedule ${s.month}:`, e);
-              })
-            );
-          }
-        }
-        if (updates.length > 0) await Promise.all(updates);
+    if (updates.length > 0) {
+      fetch(`/api/students/${studentId}/schedules`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      }).catch((e) => console.warn("schedule update failed:", e));
+    }
 
-        // Update local schedules for rendering (no extra read)
-        // Only update state when something actually changed to avoid
-        // infinite re-render loops (setState -> effect -> setState ...).
-        try {
-          const newSchedules = (schedules || []).map((s) => {
-            const mapped = allocation[s.month] || {
-              paid: 0,
-              status: "未払い",
-              relatedPayments: [],
-            };
-            return {
-              ...s,
-              paidAmount: mapped.paid || 0,
-              status: mapped.status || "未払い",
-              relatedPayments: mapped.relatedPayments || [],
-            };
-          });
+    const newSchedules = schedules.map((s) => {
+      const mapped = allocation[s.month] || { paid: 0, status: "未払い", relatedPayments: [] };
+      return { ...s, paidAmount: mapped.paid, status: mapped.status, relatedPayments: mapped.relatedPayments };
+    });
 
-          // shallow compare JSON because schedules are small (9 months)
-          const prev = JSON.stringify(schedules || []);
-          const next = JSON.stringify(newSchedules || []);
-          if (prev !== next) {
-            setSchedules(newSchedules);
-          }
-        } catch (e) {
-          // fallback: if anything goes wrong, set schedules conservatively
-          setSchedules((curr) =>
-            (curr || []).map((s) => {
-              const mapped = allocation[s.month] || {
-                paid: 0,
-                status: "未払い",
-                relatedPayments: [],
-              };
-              return {
-                ...s,
-                paidAmount: mapped.paid || 0,
-                status: mapped.status || "未払い",
-                relatedPayments: mapped.relatedPayments || [],
-              };
-            })
-          );
-        }
-      } catch (e) {
-        console.warn("applyAllocations failed:", e);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (JSON.stringify(schedules) !== JSON.stringify(newSchedules)) setSchedules(newSchedules);
   }, [payments, schedules]);
 
   const onDueChange = async (monthId, value) => {
     if (!canEditAmounts) return;
-
     const num = Math.max(0, Math.round(Number(value) || 0));
-
     try {
-      const ref = doc(db, "students", studentId, "paymentSchedules", monthId);
-      await updateDoc(ref, { dueAmount: num, updatedAt: serverTimestamp() });
-
-      // Update local state only
-      setSchedules((prev) =>
-        prev.map((s) => (s.month === monthId ? { ...s, dueAmount: num } : s))
-      );
+      const s = schedules.find((x) => x.month === monthId);
+      if (!s) return;
+      await fetch(`/api/students/${studentId}/schedules`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify([{ month: monthId, dueDate: s.dueDate || "", dueAmount: num, paidAmount: s.paidAmount || 0, status: s.status || "未払い" }]),
+      });
+      setSchedules((prev) => prev.map((x) => (x.month === monthId ? { ...x, dueAmount: num } : x)));
+      schedulesCache.delete(`${studentId}-${determineScheduleYear()}`);
     } catch (e) {
       console.warn("Failed to update dueAmount:", e);
     }
@@ -368,90 +171,41 @@ export default function PaymentSchedule({
 
   return (
     <section>
-      {/* <h2>毎月の支払い（スケジュール）</h2> */}
-
-      {loading && (
-        <div className={styles.loading}>スケジュールを作成しています…</div>
-      )}
-
+      {loading && <div className={styles.loading}>スケジュールを作成しています…</div>}
       <div className={styles.yearLabel}>
-        <strong>
-          スケジュール年:{" "}
-          {determineScheduleYear() ? determineScheduleYear() : "未設定"}
-        </strong>
+        <strong>スケジュール年: {determineScheduleYear() ?? "未設定"}</strong>
       </div>
-
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
-            <tr>
-              <th>支払い月</th>
-              <th>期限</th>
-              <th>月額</th>
-              <th>状態</th>
-              <th>レシート</th>
-            </tr>
+            <tr><th>支払い月</th><th>期限</th><th>月額</th><th>状態</th><th>レシート</th></tr>
           </thead>
-
           <tbody>
             {schedules.map((s) => (
-              <tr key={s.id || s.month} className={styles.rowBorder}>
+              <tr key={s.month} className={styles.rowBorder}>
                 <td className={styles.td}>{s.month}</td>
                 <td className={styles.td}>{s.dueDate}</td>
                 <td>
                   {canEditAmounts ? (
-                    <input
-                      type="number"
-                      defaultValue={
-                        // Prefer courseInfo.monthlyTemplate for display if present
-                        (() => {
-                          try {
-                            const mm = String(s.month || "").slice(5, 7);
-                            const tmpl = courseInfo?.monthlyTemplate || {};
-                            if (tmpl && typeof tmpl[mm] !== "undefined")
-                              return Number(tmpl[mm]) || 0;
-                          } catch (e) {
-                            /* ignore */
-                          }
-                          return s.dueAmount;
-                        })()
-                      }
-                      onBlur={(e) => onDueChange(s.month, e.target.value)}
-                      className={styles.inputAmount}
-                    />
+                    <input type="number" defaultValue={(() => {
+                      const mm = String(s.month || "").slice(5, 7);
+                      const tmpl = courseInfo?.monthlyTemplate || {};
+                      return tmpl[mm] != null ? Number(tmpl[mm]) : s.dueAmount;
+                    })()} onBlur={(e) => onDueChange(s.month, e.target.value)} className={styles.inputAmount} />
                   ) : (
-                    <>
-                      ¥
-                      {(() => {
-                        try {
-                          const mm = String(s.month || "").slice(5, 7);
-                          const tmpl = courseInfo?.monthlyTemplate || {};
-                          if (tmpl && typeof tmpl[mm] !== "undefined")
-                            return Number(tmpl[mm]).toLocaleString();
-                        } catch (e) {
-                          /* ignore */
-                        }
-                        return Number(s.dueAmount).toLocaleString();
-                      })()}
-                    </>
+                    <>¥{(() => {
+                      const mm = String(s.month || "").slice(5, 7);
+                      const tmpl = courseInfo?.monthlyTemplate || {};
+                      return tmpl[mm] != null ? Number(tmpl[mm]).toLocaleString() : Number(s.dueAmount).toLocaleString();
+                    })()}</>
                   )}
                 </td>
                 <td>
-                  <span
-                    className={
-                      s.status === "支払い済み"
-                        ? `${styles.statusText} ${styles.paid}`
-                        : s.status === "一部支払い"
-                        ? `${styles.statusText} ${styles.partial}`
-                        : `${styles.statusText} ${styles.unpaid}`
-                    }
-                  >
+                  <span className={`${styles.statusText} ${s.status === "支払い済み" ? styles.paid : s.status === "一部支払い" ? styles.partial : styles.unpaid}`}>
                     {s.status}
                   </span>
                 </td>
-                <td>
-                  <ReceiptList payments={s.relatedPayments || []} />
-                </td>
+                <td><ReceiptList payments={s.relatedPayments || []} /></td>
               </tr>
             ))}
           </tbody>

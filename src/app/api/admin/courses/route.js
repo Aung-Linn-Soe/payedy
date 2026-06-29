@@ -1,40 +1,60 @@
-import {
-  listCourses,
-  addCourse,
-  deleteCourse,
-  updateCourse,
-} from "@/data/courses";
-import { adminDb, default as admin } from "@/firebase/adminApp";
+import { prisma } from "@/lib/prisma";
+
+function slugify(name) {
+  const s = String(name || "").trim();
+  const asciiMatch = s.match(/[A-Za-z0-9]+/g);
+  if (asciiMatch && asciiMatch.length > 0) {
+    return String(asciiMatch.join("-")).toLowerCase().slice(0, 40);
+  }
+  const slug = s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40);
+  return slug || `course-${Date.now().toString(36)}`.slice(0, 40);
+}
 
 export async function GET() {
-  return new Response(JSON.stringify(listCourses()), { status: 200 });
+  const courses = await prisma.course.findMany({ orderBy: { createdAt: "asc" } });
+  return new Response(JSON.stringify(courses), { status: 200 });
 }
 
 export async function POST(req) {
   const body = await req.json();
-  const { name, nameJa, nameEn, tuition, tuitionByYear } = body;
-  if (!name && !nameJa && !nameEn)
-    return new Response("Missing name (provide name or nameJa/nameEn)", {
-      status: 400,
-    });
-  const created = addCourse(name || nameJa || nameEn, tuition || 0);
-  try {
-    const writeObj = {
-      name: created.name,
+  const { name, nameJa, nameEn, tuition, tuitionByYear, courseKey, year, pricePerMonth, fee, monthlyTemplate, paymentAcademicYear } = body;
+  const displayName = name || nameJa || nameEn;
+  if (!displayName) return new Response("Missing name", { status: 400 });
+
+  // code includes year so each grade is a separate record (e.g. "web-3rd-year")
+  const yearSlug = year ? `-${slugify(year)}` : "";
+  const code = slugify(displayName) + yearSlug;
+  const resolvedCourseKey = courseKey || slugify(displayName);
+
+  const course = await prisma.course.upsert({
+    where: { code },
+    update: {
+      name: displayName,
       nameJa: nameJa || null,
       nameEn: nameEn || null,
-      tuition: created.tuition,
-      courseKey: created.code,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-    if (tuitionByYear && typeof tuitionByYear === "object") {
-      writeObj.tuitionByYear = tuitionByYear;
-    }
-    await adminDb.collection("courses").doc(created.code).set(writeObj);
-  } catch (err) {
-    console.error("Failed to write course to Firestore (server):", err);
-  }
-  return new Response(JSON.stringify(created), { status: 201 });
+      tuition: Number(tuition) || 0,
+      courseKey: resolvedCourseKey,
+      year: year || "",
+      pricePerMonth: pricePerMonth ? Number(pricePerMonth) : null,
+      fee: fee ? Number(fee) : null,
+      monthlyTemplate: monthlyTemplate || null,
+      paymentAcademicYear: paymentAcademicYear ? Number(paymentAcademicYear) : null,
+    },
+    create: {
+      code,
+      name: displayName,
+      nameJa: nameJa || null,
+      nameEn: nameEn || null,
+      tuition: Number(tuition) || 0,
+      courseKey: resolvedCourseKey,
+      year: year || "",
+      pricePerMonth: pricePerMonth ? Number(pricePerMonth) : null,
+      fee: fee ? Number(fee) : null,
+      monthlyTemplate: monthlyTemplate || null,
+      paymentAcademicYear: paymentAcademicYear ? Number(paymentAcademicYear) : null,
+    },
+  });
+  return new Response(JSON.stringify(course), { status: 201 });
 }
 
 export async function DELETE(req) {
@@ -42,15 +62,10 @@ export async function DELETE(req) {
     const body = await req.json();
     const { code } = body;
     if (!code) return new Response("Missing code", { status: 400 });
-    const ok = deleteCourse(code);
-    if (!ok) return new Response("Not found", { status: 404 });
-    try {
-      await adminDb.collection("courses").doc(String(code)).delete();
-    } catch (err) {
-      console.error("Failed to delete course in Firestore (server):", err);
-    }
+    await prisma.course.delete({ where: { code: String(code) } });
     return new Response("Deleted", { status: 200 });
   } catch (e) {
+    if (e?.code === "P2025") return new Response("Not found", { status: 404 });
     return new Response("Bad request", { status: 400 });
   }
 }
@@ -58,34 +73,27 @@ export async function DELETE(req) {
 export async function PUT(req) {
   try {
     const body = await req.json();
-    const { code, name, nameJa, nameEn, tuition, tuitionByYear } = body;
+    const { code, name, nameJa, nameEn, tuition, tuitionByYear, year, pricePerMonth, fee, monthlyTemplate, paymentAcademicYear } = body;
     if (!code) return new Response("Missing code", { status: 400 });
-    const updated = updateCourse(code, { name, tuition, tuitionByYear });
-    if (!updated) return new Response("Not found", { status: 404 });
-    try {
-      const writeObj = {
-        name: updated.name,
-        nameJa: nameJa || updated.nameJa || null,
-        nameEn: nameEn || updated.nameEn || null,
-        tuition: updated.tuition,
-        courseKey: updated.code,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      };
-      if (tuitionByYear && typeof tuitionByYear === "object") {
-        writeObj.tuitionByYear = tuitionByYear;
-      } else if (updated.tuitionByYear !== undefined) {
-        // if updated object contains tuitionByYear (possibly null), persist it
-        writeObj.tuitionByYear = updated.tuitionByYear;
-      }
-      await adminDb
-        .collection("courses")
-        .doc(String(updated.code))
-        .set(writeObj, { merge: true });
-    } catch (err) {
-      console.error("Failed to update course in Firestore (server):", err);
-    }
+
+    const data = {};
+    if (name) data.name = name;
+    if (nameJa !== undefined) data.nameJa = nameJa;
+    if (nameEn !== undefined) data.nameEn = nameEn;
+    if (tuition !== undefined) data.tuition = Number(String(tuition).replace(/[^0-9]/g, "")) || 0;
+    if (year !== undefined) data.year = year;
+    if (pricePerMonth !== undefined) data.pricePerMonth = pricePerMonth ? Number(pricePerMonth) : null;
+    if (fee !== undefined) data.fee = fee ? Number(fee) : null;
+    if (monthlyTemplate !== undefined) data.monthlyTemplate = monthlyTemplate || null;
+    if (paymentAcademicYear !== undefined) data.paymentAcademicYear = paymentAcademicYear ? Number(paymentAcademicYear) : null;
+
+    const updated = await prisma.course.update({
+      where: { code: String(code) },
+      data,
+    });
     return new Response(JSON.stringify(updated), { status: 200 });
   } catch (e) {
+    if (e?.code === "P2025") return new Response("Not found", { status: 404 });
     return new Response("Bad request", { status: 400 });
   }
 }
