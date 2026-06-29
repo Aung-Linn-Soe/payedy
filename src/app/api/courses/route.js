@@ -18,8 +18,20 @@ export async function GET(req) {
     orderBy: { createdAt: "asc" },
   });
 
+  // Count actual enrolled students per course from the Student table
+  const codes = courses.map((c) => c.code);
+  const enrollmentCounts = await prisma.student.groupBy({
+    by: ["courseId"],
+    where: { courseId: { in: codes } },
+    _count: { courseId: true },
+  });
+  const countMap = Object.fromEntries(
+    enrollmentCounts.map((e) => [e.courseId, e._count.courseId])
+  );
+
   const serialized = courses.map((c) => ({
     ...c,
+    students: countMap[c.code] ?? 0,
     id: c.code, // keep Firestore-style id for compatibility
     createdAt: c.createdAt?.toISOString(),
     updatedAt: c.updatedAt?.toISOString(),
