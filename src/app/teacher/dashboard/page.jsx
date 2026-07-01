@@ -260,7 +260,7 @@ export default function TeacherDashboard() {
                 ? `${p.studentId || "unknown"} がレシートをアップロードしました`
                 : `${p.studentId || "unknown"} の支払いが登録されました`;
               const detail = `金額: ¥${Number(p.amount || 0).toLocaleString()}  コース: ${p.course || "-"}`;
-              return { title, time, detail };
+              return { title, time, detail, status: p.status, verified: p.verified, rejectReason: p.rejectReason };
             })}
           />
           <div style={{ marginTop: 8, display: "flex", alignItems: "center" }}>
