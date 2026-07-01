@@ -23,6 +23,7 @@ export default function EditCoursePage() {
         const data = list[0];
         data.monthlyTemplate = data.monthlyTemplate || BLANK_TEMPLATE;
         data.permonth = data.pricePerMonth ? String(data.pricePerMonth) : "";
+        data.fee = data.fee || data.tuition || "";
         setCourse(data);
       } catch (err) {
         console.error("Error fetching course:", err);
@@ -33,8 +34,12 @@ export default function EditCoursePage() {
   }, [id, router]);
 
   const handleUpdate = async () => {
-    if (!course.name || !course.fee || !course.year) {
-      alert("すべての項目を入力してください。");
+    const missing = [];
+    if (!course.name) missing.push("コース名");
+    if (!course.fee && !course.tuition) missing.push("学費");
+    if (!course.year) missing.push("学年");
+    if (missing.length > 0) {
+      alert(`以下の項目が入力されていません：\n・${missing.join("\n・")}`);
       return;
     }
     try {
