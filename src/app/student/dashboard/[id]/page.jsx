@@ -6,12 +6,13 @@ import styles from "./page.module.css";
 import receiptStyles from "@/components/ReceiptList.module.css";
 import PaymentSchedule from "@/components/PaymentSchedule";
 import { getAcademicYear, getGradeInfo } from "@/lib/academicYear";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 export default function StudentDashboardIdPage() {
   const { data: session, status } = useSession();
   const params = useParams();
   const routeId = params?.id;
+  const router = useRouter();
 
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -69,7 +70,20 @@ export default function StudentDashboardIdPage() {
   useEffect(() => {
     if (status === "unauthenticated") { setLoading(false); return; }
     if (status !== "authenticated") return;
-    setIsTeacher(session?.user?.role === "teacher" || session?.user?.isAdmin);
+
+    const role = session?.user?.role;
+    const isTeacherUser = role === "teacher" || session?.user?.isAdmin;
+    setIsTeacher(isTeacherUser);
+
+    // 学生は自分のページ以外にアクセスできない
+    if (!isTeacherUser && routeId) {
+      const ownId = session?.user?.studentId || String(session?.user?.email || "").split("@")[0].toLowerCase();
+      if (ownId && ownId !== routeId) {
+        router.replace(`/student/dashboard/${ownId}`);
+        return;
+      }
+    }
+
     fetchStudent();
     fetchPayments();
     fetchDiscounts();
