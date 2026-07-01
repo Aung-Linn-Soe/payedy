@@ -103,6 +103,7 @@ export default function PaymentSchedule({ student, courseInfo, payments = [] }) 
     if (!studentId || !schedules.length) return;
 
     const paymentEntries = (payments || [])
+      .filter((p) => p.verified === true)
       .map((p) => ({ ...p, remaining: Number(p.amount) || 0, createdAt: p.createdAt ? new Date(p.createdAt) : new Date() }))
       .sort((a, b) => a.createdAt - b.createdAt);
 

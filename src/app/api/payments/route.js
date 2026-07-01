@@ -42,7 +42,7 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { studentId, course, receiptBase64, amount, paymentMethod, status, month } = body;
+    const { studentId, course, receiptBase64, amount, paymentMethod, month } = body;
     if (!studentId) return NextResponse.json({ error: "studentId required" }, { status: 400 });
 
     const payment = await prisma.payment.create({
@@ -52,7 +52,7 @@ export async function POST(req) {
         receiptBase64: receiptBase64 || null,
         amount: Number(amount) || 0,
         paymentMethod: paymentMethod || "銀行振込",
-        status: status || "支払い済み",
+        status: "確認中",
         month: month || "",
         verified: false,
       },

@@ -295,7 +295,6 @@ export default function StudentDashboardPage() {
           receiptBase64: base64Data,
           amount: numericAmount,
           paymentMethod: "銀行振込",
-          status: "支払い済み",
           month: monthValue,
         }),
       });
@@ -376,7 +375,7 @@ export default function StudentDashboardPage() {
   const baseTotal = Number(courseInfo?.totalFee ?? courseInfo?.pricePerMonth ?? computedTuition ?? student?.totalFees ?? 0);
   const totalDiscount = discounts.reduce((s, d) => s + (Number(d.amount) || 0), 0);
   const total = Math.max(baseTotal - totalDiscount, 0);
-  const paidFromPayments = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const paidFromPayments = payments.filter((p) => p.verified === true).reduce((s, p) => s + (Number(p.amount) || 0), 0);
   const paid = paidFromPayments || Number(student?.paidAmount || 0);
   const remainingBase = Math.max(total - paid, 0);
   const remaining = Math.max(remainingBase + (prevYearRemaining || 0), 0);
@@ -459,12 +458,21 @@ export default function StudentDashboardPage() {
               <tbody>
                 {payments.map((p) => {
                   const date = p.createdAt ? new Date(p.createdAt) : new Date();
+                  const statusLabel = p.verified ? "承認済み" : p.status === "却下" ? "却下" : "確認中";
+                  const statusColor = p.verified ? "#166534" : p.status === "却下" ? "#991B1B" : "#92400E";
+                  const statusBg = p.verified ? "#DCFCE7" : p.status === "却下" ? "#FEE2E2" : "#FEF9C3";
                   return (
                     <tr key={p.paymentId || p.id}>
                       <td data-label="日付">{date.toLocaleDateString("ja-JP")}</td>
                       <td data-label="時間">{date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}</td>
                       <td data-label="金額">¥{p.amount?.toLocaleString()}</td>
                       <td data-label="支払方法">{p.paymentMethod || "-"}</td>
+                      <td data-label="状態">
+                        <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: statusBg, color: statusColor }}>
+                          {statusLabel}
+                        </span>
+                        {p.rejectReason && <div style={{ fontSize: 11, color: "#991B1B", marginTop: 2 }}>{p.rejectReason}</div>}
+                      </td>
                       <td data-label="レシート">
                         <div className={styles.paymentAction}>
                           {p.receiptBase64 ? (
@@ -472,7 +480,15 @@ export default function StudentDashboardPage() {
                           ) : (
                             <div className={receiptStyles.placeholder}><span className={receiptStyles.placeholderText}>No image</span></div>
                           )}
-                          <button className={styles.secondaryBtn} onClick={() => handleDeletePayment(p.paymentId || p.id)}>削除</button>
+                          {!p.verified && p.status !== "却下" && (
+                            <button
+                              className={styles.secondaryBtn}
+                              style={{ fontSize: 12, padding: "4px 10px", color: "#DC2626", borderColor: "#FECACA", background: "#FEF2F2" }}
+                              onClick={() => handleDeletePayment(p.paymentId || p.id)}
+                            >
+                              削除
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
