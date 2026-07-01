@@ -19,14 +19,22 @@ export async function GET(req) {
   });
 
   // Count actual enrolled students per course from the Student table
-  const codes = courses.map((c) => c.code);
-  const enrollmentCounts = await prisma.student.groupBy({
-    by: ["courseId"],
-    where: { courseId: { in: codes } },
-    _count: { courseId: true },
-  });
-  const countMap = Object.fromEntries(
-    enrollmentCounts.map((e) => [e.courseId, e._count.courseId])
+  // Match by courseId (exact) OR by courseKey+gradeEN (fallback for old records)
+  const countMap = {};
+  await Promise.all(
+    courses.map(async (c) => {
+      const count = await prisma.student.count({
+        where: {
+          OR: [
+            { courseId: c.code },
+            ...(c.courseKey && c.year
+              ? [{ courseKey: c.courseKey, gradeEN: c.year }]
+              : []),
+          ],
+        },
+      });
+      countMap[c.code] = count;
+    })
   );
 
   const serialized = courses.map((c) => ({

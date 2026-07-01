@@ -182,6 +182,36 @@ export default function StudentDashboardIdPage() {
     else alert("削除に失敗しました。");
   };
 
+  const handleApprovePayment = async (paymentId) => {
+    const res = await fetch(`/api/payments/${paymentId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "approve", approvedBy: { name: session?.user?.name, email: session?.user?.email } }),
+    }).catch(() => null);
+    if (res?.ok) fetchPayments();
+    else alert("承認に失敗しました。");
+  };
+
+  const handleRejectPayment = async (paymentId) => {
+    const reason = prompt("却下理由を入力してください（省略可）");
+    if (reason === null) return;
+    const res = await fetch(`/api/payments/${paymentId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reject", rejectReason: reason, rejectedBy: { name: session?.user?.name, email: session?.user?.email } }),
+    }).catch(() => null);
+    if (res?.ok) fetchPayments();
+    else alert("却下に失敗しました。");
+  };
+
+  const handleRevertPayment = async (paymentId) => {
+    if (!confirm("この承認を取り消して「確認中」に戻しますか？")) return;
+    const res = await fetch(`/api/payments/${paymentId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "revert" }),
+    }).catch(() => null);
+    if (res?.ok) fetchPayments();
+    else alert("取り消しに失敗しました。");
+  };
+
   const handleAddDiscount = async () => {
     if (!student?.studentId) return alert("学生情報が見つかりません。");
     const reason = String(newReason || "").trim();
@@ -225,7 +255,7 @@ export default function StudentDashboardIdPage() {
   const baseTotal = Number(courseInfo?.totalFee ?? courseInfo?.pricePerMonth ?? computedTuition ?? student?.totalFees ?? 0);
   const totalDiscount = discounts.reduce((s, d) => s + (Number(d.amount) || 0), 0);
   const total = Math.max(baseTotal - totalDiscount, 0);
-  const paid = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0) || Number(student?.paidAmount || 0);
+  const paid = payments.filter((p) => p.verified === true).reduce((s, p) => s + (Number(p.amount) || 0), 0) || Number(student?.paidAmount || 0);
   const remaining = Math.max(total - paid + (prevYearRemaining || 0), 0);
   const progress = total ? Math.min((paid / total) * 100, 100) : 0;
 
@@ -318,13 +348,16 @@ export default function StudentDashboardIdPage() {
               <div className={styles.tableWrap}>
                 <table className={styles.paymentTable}>
                   <thead>
-                    <tr><th>日付</th><th>金額</th><th>方法</th><th>領収書</th></tr>
+                    <tr><th>日付</th><th>金額</th><th>方法</th><th>状態</th><th>領収書</th></tr>
                   </thead>
                   <tbody>
                     {payments.map((p) => {
                       const date = p.createdAt ? new Date(p.createdAt) : new Date();
+                      const pid = p.paymentId || p.id;
+                      const statusCls = p.verified ? styles.badgeApproved : p.status === "却下" ? styles.badgeRejected : styles.badgePending;
+                      const statusLabel = p.verified ? "承認済み" : p.status === "却下" ? "却下" : "確認中";
                       return (
-                        <tr key={p.paymentId || p.id}>
+                        <tr key={pid}>
                           <td>
                             <div className={styles.dateCell}>
                               <span>{date.toLocaleDateString("ja-JP")}</span>
@@ -334,11 +367,26 @@ export default function StudentDashboardIdPage() {
                           <td className={styles.amountCell}>¥{Number(p.amount).toLocaleString()}</td>
                           <td>{p.paymentMethod || "-"}</td>
                           <td>
+                            <span className={`${styles.statusBadge} ${statusCls}`}>{statusLabel}</span>
+                            {p.rejectReason && <div className={styles.rejectReason}>{p.rejectReason}</div>}
+                          </td>
+                          <td>
                             <div className={styles.paymentAction}>
                               {p.receiptBase64
                                 ? <img src={p.receiptBase64} alt="receipt" className={receiptStyles.thumb} onClick={() => setLightboxSrc(p.receiptBase64)} />
                                 : <span className={styles.noImg}>なし</span>}
-                              <button className={styles.deleteBtn} onClick={() => handleDeletePayment(p.paymentId || p.id)}>削除</button>
+                              {isTeacher && !p.verified && p.status !== "却下" && (
+                                <>
+                                  <button className={styles.approveBtn} onClick={() => handleApprovePayment(pid)}>承認</button>
+                                  <button className={styles.rejectBtn} onClick={() => handleRejectPayment(pid)}>却下</button>
+                                </>
+                              )}
+                              {isTeacher && p.verified && (
+                                <button className={styles.revertBtn} onClick={() => handleRevertPayment(pid)}>却下に戻す</button>
+                              )}
+                              {!isTeacher && !p.verified && p.status !== "却下" && (
+                                <button className={styles.deleteBtn} onClick={() => handleDeletePayment(pid)}>削除</button>
+                              )}
                             </div>
                           </td>
                         </tr>

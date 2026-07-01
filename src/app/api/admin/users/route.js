@@ -17,6 +17,9 @@ export async function GET() {
       name: s.name,
       email: s.email,
       courseId: s.courseId || "",
+      courseKey: s.courseKey || "",
+      grade: s.grade || "",
+      gradeEN: s.gradeEN || "",
       role: s.role || "student",
     })),
   ];

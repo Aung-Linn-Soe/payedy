@@ -15,6 +15,11 @@ export default function TeacherDashboard() {
   const [totalPaid, setTotalPaid] = useState(0);
   const [recentPayments, setRecentPayments] = useState([]);
   const [recentLimit, setRecentLimit] = useState(3);
+  const [pendingPayments, setPendingPayments] = useState([]);
+  const [pendingLoading, setPendingLoading] = useState(true);
+  const [rejectingId, setRejectingId] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -59,6 +64,48 @@ export default function TeacherDashboard() {
     return () => clearInterval(interval);
   }, [recentLimit]);
 
+  const fetchPending = async () => {
+    try {
+      const res = await fetch("/api/payments?status=確認中&limit=100&orderBy=createdAt");
+      if (res.ok) setPendingPayments(await res.json());
+    } catch (e) { /* ignore */ }
+    finally { setPendingLoading(false); }
+  };
+
+  useEffect(() => {
+    fetchPending();
+    const interval = setInterval(fetchPending, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleApprove = async (paymentId) => {
+    await fetch(`/api/payments/${paymentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "approve", approvedBy: user?.name || user?.email }),
+    });
+    fetchPending();
+    fetchRecent();
+  };
+
+  const handleReject = async (paymentId) => {
+    const reason = rejectReason.trim();
+    await fetch(`/api/payments/${paymentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reject", rejectReason: reason }),
+    });
+    setRejectingId(null);
+    setRejectReason("");
+    fetchPending();
+  };
+
+  const th = { padding: "8px 12px", fontWeight: 600, fontSize: 13, color: "#374151", whiteSpace: "nowrap" };
+  const td = { padding: "10px 12px", verticalAlign: "middle" };
+  const approveBtn = { padding: "5px 12px", borderRadius: 6, border: "none", background: "#10b981", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: 13 };
+  const rejectBtn = { padding: "5px 12px", borderRadius: 6, border: "none", background: "#ef4444", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: 13 };
+  const cancelBtn = { padding: "5px 12px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 13 };
+
   const stats = [
     {
       title: "コース数",
@@ -89,6 +136,16 @@ export default function TeacherDashboard() {
 
   return (
     <div className="dashboard">
+      {/* Receipt preview modal */}
+      {previewUrl && (
+        <div onClick={() => setPreviewUrl(null)} style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, cursor: "zoom-out",
+        }}>
+          <img src={previewUrl} alt="receipt" style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 8 }} />
+        </div>
+      )}
+
       <header className="dashboard-header">
         <div>
           <h1>学費管理システム・{user?.isAdmin ? "管理者用" : "教師用"}</h1>
@@ -102,6 +159,92 @@ export default function TeacherDashboard() {
             <StatCard title={stat.title} value={stat.value} color={stat.color} icon={stat.icon} />
           </Link>
         ))}
+      </div>
+
+      {/* Pending approvals section */}
+      <div className="card" style={{ marginTop: 24, marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <h3 style={{ margin: 0 }}>承認待ち一覧</h3>
+          {pendingPayments.length > 0 && (
+            <span style={{
+              background: "#ef4444", color: "#fff",
+              borderRadius: 999, fontSize: 12, padding: "2px 8px", fontWeight: 700,
+            }}>{pendingPayments.length}</span>
+          )}
+        </div>
+
+        {pendingLoading ? (
+          <div style={{ color: "#888", padding: "12px 0" }}>読み込み中…</div>
+        ) : pendingPayments.length === 0 ? (
+          <div style={{ color: "#888", padding: "12px 0" }}>承認待ちの支払いはありません</div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+              <thead>
+                <tr style={{ background: "#f9fafb", textAlign: "left" }}>
+                  <th style={th}>学生番号</th>
+                  <th style={th}>金額</th>
+                  <th style={th}>対象月</th>
+                  <th style={th}>アップロード日</th>
+                  <th style={th}>領収書</th>
+                  <th style={th}>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingPayments.map((p) => (
+                  <React.Fragment key={p.id}>
+                    <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
+                      <td style={td}>
+                        <Link href={`/student/dashboard/${p.studentId}`} style={{ color: "#3b82f6" }}>
+                          {p.studentId}
+                        </Link>
+                      </td>
+                      <td style={td}>¥{Number(p.amount || 0).toLocaleString()}</td>
+                      <td style={td}>{p.month || "-"}</td>
+                      <td style={td}>
+                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString("ja-JP") : "-"}
+                      </td>
+                      <td style={td}>
+                        {p.receiptBase64 ? (
+                          <img
+                            src={p.receiptBase64}
+                            alt="receipt"
+                            onClick={() => setPreviewUrl(p.receiptBase64)}
+                            style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 4, cursor: "zoom-in", border: "1px solid #e5e7eb" }}
+                          />
+                        ) : <span style={{ color: "#bbb" }}>なし</span>}
+                      </td>
+                      <td style={td}>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <button onClick={() => handleApprove(p.paymentId)} style={approveBtn}>承認</button>
+                          <button onClick={() => { setRejectingId(p.paymentId); setRejectReason(""); }} style={rejectBtn}>却下</button>
+                        </div>
+                      </td>
+                    </tr>
+                    {rejectingId === p.paymentId && (
+                      <tr>
+                        <td colSpan={6} style={{ padding: "8px 12px", background: "#fff7f7", borderBottom: "1px solid #e5e7eb" }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                            <input
+                              type="text"
+                              placeholder="却下理由を入力..."
+                              value={rejectReason}
+                              onChange={(e) => setRejectReason(e.target.value)}
+                              style={{ flex: 1, padding: "6px 10px", border: "1px solid #fca5a5", borderRadius: 6, minWidth: 180 }}
+                              autoFocus
+                            />
+                            <button onClick={() => handleReject(p.paymentId)} style={rejectBtn}>送信</button>
+                            <button onClick={() => setRejectingId(null)} style={cancelBtn}>キャンセル</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <aside>

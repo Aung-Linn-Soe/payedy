@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import "./detail.css";
@@ -16,11 +16,24 @@ export default function CourseDetailPage() {
   const { id } = useParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [students, setStudents] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [paymentsMap, setPaymentsMap] = useState({});
   const [schedulesMap, setSchedulesMap] = useState({});
   const [courseDocInfo, setCourseDocInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Filter students: match by courseId OR by courseKey+gradeEN (fallback for old/reset records)
+  const students = useMemo(() => {
+    return allUsers.filter((s) => {
+      if (s.courseId === id) return true;
+      if (
+        courseDocInfo?.courseKey &&
+        s.courseKey === courseDocInfo.courseKey &&
+        s.gradeEN === courseDocInfo.year
+      ) return true;
+      return false;
+    });
+  }, [allUsers, id, courseDocInfo]);
 
   // Fetch course info
   useEffect(() => {
@@ -36,21 +49,35 @@ export default function CourseDetailPage() {
     })();
   }, [id]);
 
-  // Fetch students for this course
+  // Fetch all users (filtering is handled by useMemo above)
   const fetchStudents = async () => {
     if (!id) return;
     try {
       const res = await fetch("/api/admin/users");
       if (!res.ok) return;
       const all = await res.json();
-      const filtered = all.filter((s) => s.courseId === id || s.courseDocId === id || s.courseKey === id);
-      setStudents(filtered);
+      setAllUsers(all);
+    } catch (e) {
+      console.error("fetchStudents error:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Fetch payments and schedules for each student
+  useEffect(() => {
+    fetchStudents();
+    const interval = setInterval(fetchStudents, 10000);
+    return () => clearInterval(interval);
+  }, [id]);
+
+  // Fetch payments and schedules whenever the filtered student list changes
+  useEffect(() => {
+    if (!students.length) return;
+    (async () => {
       const pMap = {};
       const sMap = {};
       await Promise.all(
-        filtered.map(async (s) => {
+        students.map(async (s) => {
           const sid = s.studentId || s.id;
           try {
             const [pRes, schedRes] = await Promise.all([
@@ -69,18 +96,8 @@ export default function CourseDetailPage() {
       );
       setPaymentsMap(pMap);
       setSchedulesMap(sMap);
-    } catch (e) {
-      console.error("fetchStudents error:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStudents();
-    const interval = setInterval(fetchStudents, 10000);
-    return () => clearInterval(interval);
-  }, [id]);
+    })();
+  }, [students]);
 
   const handleDeleteStudent = async (studentId) => {
     if (!window.confirm("この学生を削除しますか？")) return;
