@@ -199,6 +199,23 @@
 }
 .unpaid { background: #FEF3C7; color: #92400E; }
 
+/* ─── Profile page tab ─── */
+.profilePageWrap { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 0; }
+.profilePageAvatar {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  color: #fff; font-size: 32px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.25); overflow: hidden;
+}
+.profilePageImg { width: 100%; height: 100%; object-fit: cover; }
+.profilePageName { font-size: 20px; font-weight: 700; color: #0F172A; }
+.profileGrid { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 0; margin-top: 8px; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
+.profileGridItem { display: flex; padding: 13px 16px; border-bottom: 1px solid #F1F5F9; background: #fff; }
+.profileGridItem:last-child { border-bottom: none; }
+.profileGridLabel { width: 120px; flex-shrink: 0; font-size: 12px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; }
+.profileGridValue { font-size: 14px; color: #0F172A; font-weight: 500; word-break: break-all; }
+
 /* ─── Center fallback ─── */
 .center {
   display: flex;
@@ -213,43 +230,88 @@
 /* ─── Upload section ─── */
 .uploadSection {
   background: #fff;
-  padding: 28px;
+  padding: 32px;
   border-radius: 14px;
   border: 1px solid #E2E8F0;
-  box-shadow: 0 1px 3px rgba(15,23,42,0.07);
+  box-shadow: 0 1px 3px rgba(15,23,42,0.06);
   margin: 0 auto;
   width: 100%;
-  max-width: 520px;
+  max-width: 540px;
   box-sizing: border-box;
 }
+.uploadTitle    { font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 4px; }
+.uploadSubtitle { font-size: 13px; color: #64748B; margin-bottom: 24px; }
 .uploadForm     { display: flex; flex-direction: column; gap: 20px; }
 .uploadField    { text-align: left; width: 100%; }
-.uploadLabel    { font-weight: 600; font-size: 13px; margin-bottom: 6px; display: block; color: #374151; }
+.uploadLabel {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  display: block;
+  color: #475569;
+}
 .uploadInput {
-  padding: 10px 14px;
+  padding: 10px 13px;
   border-radius: 8px;
   border: 1px solid #CBD5E1;
   width: 100%;
   background: #fff;
-  font-size: 15px;
+  font-size: 14px;
+  color: #0F172A;
   box-sizing: border-box;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.uploadInput:focus { outline: none; border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
-.uploadFileInput {
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px dashed #CBD5E1;
-  width: 100%;
-  background: #F8FAFC;
-  font-size: 14px;
-  box-sizing: border-box;
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
-.uploadFileInput:hover { border-color: #2563EB; }
+.uploadInput::placeholder { color: #94A3B8; }
+.uploadInput:focus { outline: none; border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 
-.uploadBtnWrap { display: flex; justify-content: center; }
+.uploadFileLabel { display: block; cursor: pointer; }
+
+.uploadDropArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 32px 20px;
+  border: 2px dashed #CBD5E1;
+  border-radius: 12px;
+  background: #F8FAFC;
+  transition: border-color 0.15s, background 0.15s;
+}
+.uploadDropArea:hover { border-color: #2563EB; background: #EFF6FF; }
+.uploadDropIcon { font-size: 32px; }
+.uploadDropText { font-size: 14px; font-weight: 600; color: #334155; }
+.uploadDropHint { font-size: 12px; color: #94A3B8; }
+
+.uploadPreview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border: 2px solid #2563EB;
+  border-radius: 12px;
+  background: #EFF6FF;
+}
+.uploadPreviewImg {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: contain;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.uploadPreviewName {
+  font-size: 13px;
+  color: #334155;
+  font-weight: 600;
+  text-align: center;
+  word-break: break-all;
+}
+.uploadPreviewChange { font-size: 12px; color: #2563EB; }
+
+.uploadBtnWrap { display: flex; justify-content: center; margin-top: 4px; }
 .uploadBtn {
   padding: 12px 0;
   width: 100%;
