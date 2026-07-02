@@ -17,25 +17,39 @@
 .loading { color: #64748B; font-size: 14px; }
 .muted   { color: #64748B; font-size: 13px; }
 
-/* ─── Stats row ─── */
-.statsRow {
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
-  flex-wrap: wrap;
-}
-
-.statCard {
-  padding: 16px 20px;
-  background: #fff;
-  border-radius: 10px;
+/* ─── Course × Year table ─── */
+.courseYearTableWrap {
+  overflow-x: auto;
   border: 1px solid #E2E8F0;
-  box-shadow: 0 1px 3px rgba(15,23,42,0.06);
-  min-width: 130px;
+  border-radius: 10px;
+  background: #fff;
 }
 
-.statLabel { font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; }
-.statValue { font-size: 22px; font-weight: 700; color: #0F172A; margin-top: 4px; letter-spacing: -0.02em; }
+.courseYearTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.courseYearTable th, .courseYearTable td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.courseYearTable th {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #F8FAFC;
+}
+
+.courseYearTable tbody tr:last-child td { border-bottom: none; }
+
+.remainingUnpaid { color: #DC2626; font-weight: 600; }
 
 /* ─── Chart section ─── */
 .chartSection { margin-top: 24px; }
@@ -76,43 +90,91 @@
 .bars {
   --chart-height: 180px;
   --gap: 8px;
+  --bar: #93C5FD;      /* sequential blue, base step */
+  --bar-strong: #2563EB; /* sequential blue, top step — the month the story is about */
+  --bar-hover: #60A5FA;  /* one step darker than base, for the hover "lift" */
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: var(--gap);
   align-items: end;
   height: var(--chart-height);
-  padding: 10px 8px 0;
+  padding: 28px 8px 0;
   background: #F8FAFC;
   border: 1px solid #E2E8F0;
   border-radius: 10px;
   width: 100%;
 }
 
-.barCol { display: flex; flex-direction: column; align-items: center; }
+.barCol {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  border-radius: 6px;
+  outline-offset: 2px;
+}
+.barCol:focus-visible { outline: 2px solid #2563EB; }
+
+.barStack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  width: 100%;
+}
 
 .bar {
+  position: relative;
   width: min(24px, 65%);
-  background: #93C5FD;
+  background: var(--bar);
   border-radius: 4px 4px 0 0;
-  transition: height 300ms ease;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  transition: height 300ms ease, background-color 120ms ease;
 }
-.barMax { background: #2563EB; }
+.barMax  { background: var(--bar-strong); }
+.barHover:not(.barMax) { background: var(--bar-hover); }
+
+/* Direct label — only on the extreme bar; the rest live in the hover tooltip */
+.barCapValue {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+/* Hover/focus tooltip for every other bar */
+.barTooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  background: #0F172A;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+}
 
 .barMonth { font-size: 11px; color: #64748B; margin-top: 6px; }
-.barAmt   { font-size: 11px; color: #475569; margin-top: 2px; font-weight: 500; }
 
 /* ─── Responsive ─── */
 @media (max-width: 640px) {
   .paymentPage { padding: 16px 14px; }
   .bars { --chart-height: 150px; --gap: 6px; }
   .bar { width: min(18px, 55%); }
-  .barMonth, .barAmt { font-size: 10.5px; }
+  .barMonth, .barCapValue, .barTooltip { font-size: 10.5px; }
 }
 @media (max-width: 420px) {
   .bars { --chart-height: 130px; --gap: 4px; }
-  .statValue { font-size: 18px; }
   .bar { width: min(14px, 50%); }
 }

@@ -9,8 +9,8 @@
  */
 
 /**
- * Returns sorted schedule month IDs (e.g. ["2026-02", ..., "2026-10"])
- * based on courseInfo.monthlyTemplate keys, falling back to Feb-Oct.
+ * Returns sorted schedule month IDs (e.g. ["2026-01", ..., "2026-12"])
+ * based on courseInfo.monthlyTemplate keys, falling back to Jan-Dec.
  */
 export function getScheduleMonths(courseInfo, year) {
   const tmpl = courseInfo?.monthlyTemplate || {};
@@ -18,7 +18,7 @@ export function getScheduleMonths(courseInfo, year) {
   const monthNums =
     keys.length > 0
       ? keys.map(Number).filter((n) => n >= 1 && n <= 12).sort((a, b) => a - b)
-      : [2, 3, 4, 5, 6, 7, 8, 9, 10];
+      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   return monthNums.map((m) => `${year}-${String(m).padStart(2, "0")}`);
 }
 
@@ -31,7 +31,7 @@ export function getMonthlyDue(monthId, courseInfo) {
   if (tmpl[mm] != null) return Number(tmpl[mm]);
   if (courseInfo?.pricePerMonth) return Number(courseInfo.pricePerMonth);
   const total = Number(courseInfo?.totalFee) || 0;
-  return total > 0 ? Math.floor(total / 9) : 0;
+  return total > 0 ? Math.floor(total / 12) : 0;
 }
 
 /**

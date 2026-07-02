@@ -5,7 +5,7 @@ import "./page.css";
 
 const BLANK_COURSE = {
   name: "", nameJa: "", nameEn: "", fee: "", permonth: "",
-  monthlyTemplate: { "02": "", "03": "", "04": "", "05": "", "06": "", "07": "", "08": "", "09": "", "10": "" },
+  monthlyTemplate: { "01": "", "02": "", "03": "", "04": "", "05": "", "06": "", "07": "", "08": "", "09": "", "10": "", "11": "", "12": "" },
   year: "1st Year", paymentAcademicYear: new Date().getFullYear(),
 };
 
@@ -91,7 +91,7 @@ export default function CoursesPage() {
   };
 
   const filteredCourses = activeYear === "All" ? courses : courses.filter((c) => c.year === activeYear);
-  const monthLabels = { "02": "February","03": "March","04": "April","05": "May","06": "June","07": "July","08": "August","09": "September","10": "October" };
+  const monthLabels = { "01": "January", "02": "February", "03": "March", "04": "April", "05": "May", "06": "June", "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December" };
 
   return (
     <div className="courses-page">
