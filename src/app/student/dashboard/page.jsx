@@ -250,6 +250,7 @@ export default function StudentDashboardPage() {
 
   // --- Receipt upload ---
   const handleReceiptUpload = async (targetMonth) => {
+    if (!targetMonth) return alert("対象月を選択してください。");
     if (!file || !student) return alert("ファイルを選択してください。");
     const numericAmount = Number(String(amount).replace(/[^0-9.-]/g, ""));
     if (!numericAmount || numericAmount <= 0) return alert("有効な金額を入力してください（例: 80000）");
@@ -523,7 +524,7 @@ export default function StudentDashboardPage() {
               <label>金額:<input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="例: 86000" style={{ marginLeft: 8 }} /></label>
               <label>対象月:<input type="month" value={receiptMonth} onChange={(e) => setReceiptMonth(e.target.value)} style={{ marginLeft: 8 }} /></label>
               <label>ファイル:<input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0])} style={{ marginLeft: 8 }} /></label>
-              <button onClick={() => handleReceiptUpload(receiptMonth || undefined)} disabled={uploading}>
+              <button onClick={() => handleReceiptUpload(receiptMonth || undefined)} disabled={uploading || !receiptMonth || !file || !amount}>
                 {uploading ? "アップロード中..." : "OK"}
               </button>
             </div>

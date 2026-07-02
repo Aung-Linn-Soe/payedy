@@ -154,6 +154,7 @@ export default function StudentDashboardIdPage() {
   }, []);
 
   const handleReceiptUpload = async (targetMonth) => {
+    if (!targetMonth) return alert("対象月を選択してください。");
     if (!file || !student) return alert("ファイルを選択してください。");
     const numericAmount = Number(String(amount).replace(/[^0-9.-]/g, ""));
     if (!numericAmount || numericAmount <= 0) return alert("有効な金額を入力してください");
@@ -472,7 +473,7 @@ export default function StudentDashboardIdPage() {
               <button
                 className={styles.uploadBtn}
                 onClick={() => handleReceiptUpload(receiptMonth || undefined)}
-                disabled={uploading || !file || !amount}
+                disabled={uploading || !file || !amount || !receiptMonth}
               >
                 {uploading ? "アップロード中..." : "送信する"}
               </button>

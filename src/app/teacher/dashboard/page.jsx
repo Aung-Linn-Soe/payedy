@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import * as XLSX from "xlsx";
 import "./page.css";
 
 import Link from "next/link";
@@ -20,6 +21,11 @@ export default function TeacherDashboard() {
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -63,6 +69,39 @@ export default function TeacherDashboard() {
     const interval = setInterval(fetchRecent, 10000);
     return () => clearInterval(interval);
   }, [recentLimit]);
+
+  const handleExportExcel = async () => {
+    if (!selectedMonth) return;
+    setDownloading(true);
+    try {
+      const res = await fetch(`/api/admin/stats?month=${selectedMonth}`);
+      if (!res.ok) throw new Error();
+      const { students } = await res.json();
+      if (!students?.length) { alert("選択した月に未払いの学生はいません。"); return; }
+      const [y, m] = selectedMonth.split("-");
+      const label = `${y}年${Number(m)}月`;
+      const data = students.map((s) => ({
+        "コース": s.courseName,
+        "学年": s.grade,
+        "学生番号": s.studentId,
+        "氏名": s.name,
+        "未払い月": s.unpaidMonths.join("/"),
+        "学費（円）": s.totalFee,
+        "支払い済み（円）": s.totalPaid,
+        "残り（円）": s.totalRemaining,
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      ws["!cols"] = [22, 10, 12, 14, 26, 14, 14, 14].map((w) => ({ wch: w }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, `未払い_${label}`);
+      XLSX.writeFile(wb, `未払い一覧_${label}.xlsx`);
+    } catch (e) {
+      alert("ダウンロードに失敗しました。");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
 
   const fetchPending = async () => {
     try {
@@ -160,6 +199,36 @@ export default function TeacherDashboard() {
           </Link>
         ))}
       </div>
+
+      {/* Month selector + Excel download */}
+      {(() => {
+        const year = new Date().getFullYear();
+        const months = Array.from({ length: 9 }, (_, i) => {
+          const m = i + 2;
+          return { value: `${year}-${String(m).padStart(2, "0")}`, label: `${year}年${m}月` };
+        });
+        return (
+          <div className="card" style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <label style={{ fontWeight: 600, fontSize: 14, color: "#374151" }}>対象月を選択：</label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #d1d5db", fontSize: 14, cursor: "pointer" }}>
+              {months.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+            <button
+              onClick={handleExportExcel}
+              disabled={downloading}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 20px", borderRadius: 8, border: "none",
+                background: downloading ? "#9ca3af" : "#3b82f6", color: "#fff",
+                cursor: downloading ? "default" : "pointer", fontWeight: 700, fontSize: 14 }}>
+              {downloading ? "作成中..." : "📥 Excelダウンロード"}
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Pending approvals section */}
       <div className="card" style={{ marginTop: 24, marginBottom: 24 }}>
