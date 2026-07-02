@@ -18,7 +18,6 @@ export default function CourseDetailPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [allUsers, setAllUsers] = useState([]);
   const [paymentsMap, setPaymentsMap] = useState({});
-  const [schedulesMap, setSchedulesMap] = useState({});
   const [courseDocInfo, setCourseDocInfo] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -70,32 +69,24 @@ export default function CourseDetailPage() {
     return () => clearInterval(interval);
   }, [id]);
 
-  // Fetch payments and schedules whenever the filtered student list changes
+  // Fetch verified payments for each student
   useEffect(() => {
     if (!students.length) return;
     (async () => {
       const pMap = {};
-      const sMap = {};
       await Promise.all(
         students.map(async (s) => {
           const sid = s.studentId || s.id;
           try {
-            const [pRes, schedRes] = await Promise.all([
-              fetch(`/api/payments?studentId=${sid}&limit=200`),
-              fetch(`/api/students/${sid}/schedules`),
-            ]);
+            const pRes = await fetch(`/api/payments?studentId=${sid}&limit=200`);
             const payments = pRes.ok ? await pRes.json() : [];
-            const schedules = schedRes.ok ? await schedRes.json() : [];
-            const totalPaid = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-            const totalDue = schedules.reduce((sum, s) => sum + (Number(s.dueAmount) || 0), 0);
-            const totalPaidSched = schedules.reduce((sum, s) => sum + (Number(s.paidAmount) || 0), 0);
-            pMap[String(sid)] = { totalPaid, count: payments.length };
-            sMap[String(sid)] = { totalDue, totalPaid: Math.max(totalPaid, totalPaidSched), count: schedules.length };
+            const verifiedPayments = payments.filter((p) => p.verified === true);
+            const totalPaid = verifiedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+            pMap[String(sid)] = { totalPaid, count: verifiedPayments.length };
           } catch (e) { /* ignore */ }
         })
       );
       setPaymentsMap(pMap);
-      setSchedulesMap(sMap);
     })();
   }, [students]);
 
@@ -112,15 +103,15 @@ export default function CourseDetailPage() {
   const rowsWithRates = students.map((s) => {
     const sid = s.studentId || s.id;
     const pm = paymentsMap[String(sid)] || { totalPaid: 0, count: 0 };
-    const sched = schedulesMap[String(sid)] || { totalDue: 0, totalPaid: 0, count: 0 };
-    const totalFeeVal = toSafeNumber(s.totalFees ?? s.totalFee ?? sched.totalDue ?? 0);
-    const paidVal = toSafeNumber(s.paidAmount ?? pm.totalPaid ?? sched.totalPaid ?? 0);
+    const courseFee = toSafeNumber(courseDocInfo?.fee || courseDocInfo?.tuition || 0);
+    const totalFeeVal = courseFee > 0 ? courseFee : toSafeNumber(Number(courseDocInfo?.pricePerMonth) * 9 || 0);
+    // Use only verified payment totals (never stale student.paidAmount)
+    const paidVal = toSafeNumber(pm.totalPaid);
     const discountVal = toSafeNumber(s.discount || 0);
-    const base = totalFeeVal > 0 ? totalFeeVal : (Number(courseDocInfo?.pricePerMonth) * 9 || 0);
-    const discounted = Math.max(base - discountVal, 0);
-    const divisor = discounted > 0 ? discounted : base;
+    const discounted = Math.max(totalFeeVal - discountVal, 0);
+    const divisor = discounted > 0 ? discounted : totalFeeVal;
     const paymentRate = divisor > 0 ? Math.min(100, Math.max(0, (paidVal / divisor) * 100)) : 0;
-    return { s, sched, pm, totalFeeVal, paidVal, paymentRate: Number(paymentRate.toFixed(1)) };
+    return { s, pm, totalFeeVal, paidVal, paymentRate: Number(paymentRate.toFixed(1)) };
   });
 
   const displayedRows = rowsWithRates.filter((r) => {
