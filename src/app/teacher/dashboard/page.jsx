@@ -203,8 +203,8 @@ export default function TeacherDashboard() {
       {/* Month selector + Excel download */}
       {(() => {
         const year = new Date().getFullYear();
-        const months = Array.from({ length: 9 }, (_, i) => {
-          const m = i + 2;
+        const months = Array.from({ length: 12 }, (_, i) => {
+          const m = i + 1;
           return { value: `${year}-${String(m).padStart(2, "0")}`, label: `${year}年${m}月` };
         });
         return (

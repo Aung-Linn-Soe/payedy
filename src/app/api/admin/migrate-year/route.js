@@ -61,7 +61,7 @@ export async function POST(req) {
     }
 
     const months = [];
-    for (let m = 2; m <= 10; m++) months.push(String(m).padStart(2, "0"));
+    for (let m = 1; m <= 12; m++) months.push(String(m).padStart(2, "0"));
 
     const templateVals = months.map((mm) => Number(monthlyTemplate[mm] || 0));
     const templateSum = templateVals.reduce((s, v) => s + v, 0);

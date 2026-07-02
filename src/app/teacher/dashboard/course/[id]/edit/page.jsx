@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import "./edit.css";
 
-const BLANK_TEMPLATE = { "02": "", "03": "", "04": "", "05": "", "06": "", "07": "", "08": "", "09": "", "10": "" };
-const MONTH_LABELS = { "02": "February","03": "March","04": "April","05": "May","06": "June","07": "July","08": "August","09": "September","10": "October" };
+const BLANK_TEMPLATE = { "01": "", "02": "", "03": "", "04": "", "05": "", "06": "", "07": "", "08": "", "09": "", "10": "", "11": "", "12": "" };
+const MONTH_LABELS = { "01": "January", "02": "February", "03": "March", "04": "April", "05": "May", "06": "June", "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December" };
 
 export default function EditCoursePage() {
   const { id } = useParams();

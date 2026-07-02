@@ -38,7 +38,7 @@ export function computeMigrationPlan(
   courseTemplate = {}
 ) {
   // Normalize month list
-  const defaultMonths = ["02", "03", "04", "05", "06", "07", "08", "09", "10"];
+  const defaultMonths = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
   const months = Array.isArray(paymentMonths)
     ? paymentMonths.slice()
     : Array.isArray(courseTemplate.paymentMonths)

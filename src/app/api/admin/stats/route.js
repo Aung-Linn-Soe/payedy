@@ -20,7 +20,7 @@ export async function GET(req) {
   const [year, monthStr] = selectedMonth.split("-");
   const monthNum = Number(monthStr);
 
-  if (monthNum < 2 || monthNum > 10) {
+  if (monthNum < 1 || monthNum > 12) {
     return NextResponse.json({ students: [], selectedMonth });
   }
 
@@ -72,7 +72,7 @@ export async function GET(req) {
     const paidForSelected = (allocated[selectedMonth] || { paid: 0 }).paid;
     if (paidForSelected >= monthlyDue) continue; // fully paid — skip
 
-    // Collect unpaid months from Feb up to selectedMonth
+    // Collect unpaid months from the schedule start up to selectedMonth
     const unpaidMonths = [];
     for (const m of scheduleMonths) {
       if (m > selectedMonth) break;
