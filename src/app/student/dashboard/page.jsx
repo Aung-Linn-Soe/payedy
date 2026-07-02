@@ -15,6 +15,7 @@ export default function StudentDashboardPage() {
   const [computedTuition, setComputedTuition] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [amount, setAmount] = useState("");
   const [receiptMonth, setReceiptMonth] = useState("");
@@ -304,6 +305,7 @@ export default function StudentDashboardPage() {
       alert("支払い情報を保存しました！");
       setFile(null);
       setAmount("");
+      setPreviewUrl(null);
       await fetchPayments();
     } catch (err) {
       console.error("アップロードエラー:", err);
@@ -517,15 +519,65 @@ export default function StudentDashboardPage() {
       )}
 
       {activeTab === "upload" && (
-        <section className={styles.card}>
-          <h2>レシートをアップロード</h2>
-          <div style={{ marginTop: 4, padding: 12, border: "1px solid #eee", borderRadius: 8, background: "#fff" }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <label>金額:<input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="例: 86000" style={{ marginLeft: 8 }} /></label>
-              <label>対象月:<input type="month" value={receiptMonth} onChange={(e) => setReceiptMonth(e.target.value)} style={{ marginLeft: 8 }} /></label>
-              <label>ファイル:<input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0])} style={{ marginLeft: 8 }} /></label>
-              <button onClick={() => handleReceiptUpload(receiptMonth || undefined)} disabled={uploading || !receiptMonth || !file || !amount}>
-                {uploading ? "アップロード中..." : "OK"}
+        <section className={styles.uploadSection}>
+          <h2 className={styles.uploadTitle}>領収書アップロード</h2>
+          <p className={styles.uploadSubtitle}>支払いの証明として領収書画像を提出してください</p>
+          <div className={styles.uploadForm}>
+            <div className={styles.uploadField}>
+              <span className={styles.uploadLabel}>対象月</span>
+              <input
+                type="month"
+                className={styles.uploadInput}
+                value={receiptMonth}
+                onChange={(e) => setReceiptMonth(e.target.value)}
+              />
+            </div>
+            <div className={styles.uploadField}>
+              <span className={styles.uploadLabel}>支払い金額（円）</span>
+              <input
+                type="number"
+                className={styles.uploadInput}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="例: 86000"
+                min="0"
+              />
+            </div>
+            <div className={styles.uploadField}>
+              <span className={styles.uploadLabel}>領収書画像</span>
+              <label className={styles.uploadFileLabel}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    setFile(f);
+                    setPreviewUrl(f ? URL.createObjectURL(f) : null);
+                  }}
+                />
+                {previewUrl ? (
+                  <div className={styles.uploadPreview}>
+                    <img src={previewUrl} alt="preview" className={styles.uploadPreviewImg} />
+                    <span className={styles.uploadPreviewName}>{file?.name}</span>
+                    <span className={styles.uploadPreviewChange}>クリックして変更</span>
+                  </div>
+                ) : (
+                  <div className={styles.uploadDropArea}>
+                    <span className={styles.uploadDropIcon}>📎</span>
+                    <span className={styles.uploadDropText}>クリックしてファイルを選択</span>
+                    <span className={styles.uploadDropHint}>JPG・PNG・GIF 対応</span>
+                  </div>
+                )}
+              </label>
+            </div>
+            <div className={styles.uploadBtnWrap}>
+              <button
+                className={styles.uploadBtn}
+                onClick={() => handleReceiptUpload(receiptMonth || undefined)}
+                disabled={uploading || !file || !amount || !receiptMonth}
+              >
+                {uploading ? "アップロード中..." : "送信する"}
               </button>
             </div>
           </div>
@@ -534,11 +586,28 @@ export default function StudentDashboardPage() {
 
       {activeTab === "profile" && (
         <section className={styles.card}>
-          <h2 style={{ textAlign: "center" }}>プロフィール</h2>
-          <div style={{ padding: 12, border: "1px solid #eee", borderRadius: 8, background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-            <p style={{ margin: "6px 0" }}>名前: {student?.name || session?.user?.name}</p>
-            <p style={{ margin: "6px 0" }}>メール: {session?.user?.email}</p>
-            <p style={{ margin: "6px 0" }}>学籍番号: {student?.studentId || "未登録"}</p>
+          <div className={styles.profilePageWrap}>
+            <div className={styles.profilePageAvatar}>
+              {session?.user?.image
+                ? <img src={session.user.image} alt="avatar" className={styles.profilePageImg} referrerPolicy="no-referrer" />
+                : <span>{(student?.name || session?.user?.name || "?").charAt(0).toUpperCase()}</span>
+              }
+            </div>
+            <div className={styles.profilePageName}>{student?.name || session?.user?.name || "未設定"}</div>
+            <div className={styles.profileGrid}>
+              {[
+                { label: "メールアドレス", value: session?.user?.email || student?.email || "-" },
+                { label: "学籍番号", value: student?.studentId || "未登録" },
+                { label: "コース", value: courseDisplayName || "未設定" },
+                { label: "学年", value: student?.gradeJP || studentYearJP || "-" },
+                { label: "入学年", value: student?.entranceYear ? `${student.entranceYear}年` : "-" },
+              ].map(({ label, value }) => (
+                <div key={label} className={styles.profileGridItem}>
+                  <span className={styles.profileGridLabel}>{label}</span>
+                  <span className={styles.profileGridValue}>{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}

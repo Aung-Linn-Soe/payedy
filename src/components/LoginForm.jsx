@@ -25,16 +25,9 @@ export default function SignInPage() {
     <div className={styles.wrapper}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <div className={styles.logoRow}>
-            <span className={styles.logoDot} aria-hidden="true">
-              P
-            </span>
-            <h1 className={styles.title}>
-              <span className={styles.titleGradient}>PayEdu</span>
-            </h1>
-          </div>
-          <p className={styles.sub}>学費の支払いを、もっと簡単に。</p>
-          <div className={styles.decor} aria-hidden="true" />
+          <span className={styles.logoDot} aria-hidden="true">P</span>
+          <h1 className={styles.title}>ログイン</h1>
+          <p className={styles.sub}>Google アカウントでログインしてください</p>
         </div>
 
         <button
